@@ -1,12 +1,26 @@
-import React from "react";
+import React, { useState } from "react";
 import { useAuth } from "@workspace/replit-auth-web";
 import { Link, useLocation } from "wouter";
-import { Map, Users, MapPin, Activity, User, LogOut } from "lucide-react";
+import { Map, Users, MapPin, Activity, User, LogOut, AlertTriangle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useAutoTrackContext } from "@/context/AutoTrackContext";
+import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
+
+const SOS_COOLDOWN_KEY = "wyd_sos_last";
+const SOS_COOLDOWN_MS  = 5 * 60 * 1000; // 5 minutes
 
 const navItems = [
   { href: "/",         label: "Map",      icon: Map },
@@ -64,6 +78,108 @@ function MobileTrackingDot() {
       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
       <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
     </span>
+  );
+}
+
+function SosButton() {
+  const { toast }                         = useToast();
+  const [confirmOpen, setConfirmOpen]     = useState(false);
+  const [sending, setSending]             = useState(false);
+  const [onCooldown, setOnCooldown]       = useState(() => {
+    try {
+      const last = localStorage.getItem(SOS_COOLDOWN_KEY);
+      return last ? Date.now() - Number(last) < SOS_COOLDOWN_MS : false;
+    } catch { return false; }
+  });
+
+  const handleSend = async () => {
+    setSending(true);
+    try {
+      const res  = await fetch("/api/sos", {
+        method:      "POST",
+        credentials: "include",
+        headers:     { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem(SOS_COOLDOWN_KEY, String(Date.now()));
+        setOnCooldown(true);
+        setTimeout(() => setOnCooldown(false), SOS_COOLDOWN_MS);
+        toast({
+          title:       "SOS sent! 🆘",
+          description: data.notified > 0
+            ? `Alert don reach ${data.notified} person${data.notified > 1 ? "s" : ""} in your circles.`
+            : "Alert sent — no push subscribers found, but the event was logged.",
+        });
+      } else {
+        toast({ title: "SOS failed", description: data.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Network error", description: "Could not send SOS — check your connection.", variant: "destructive" });
+    } finally {
+      setSending(false);
+      setConfirmOpen(false);
+    }
+  };
+
+  return (
+    <>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={() => !onCooldown && setConfirmOpen(true)}
+            disabled={sending || onCooldown}
+            aria-label="Send SOS alert"
+            className={cn(
+              "fixed z-50 bottom-20 right-4 md:bottom-6 md:right-6",
+              "w-14 h-14 rounded-full shadow-2xl flex items-center justify-center",
+              "transition-all duration-200 active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-red-400",
+              onCooldown
+                ? "bg-rose-200 dark:bg-rose-900/50 cursor-not-allowed"
+                : "bg-rose-600 hover:bg-rose-700 cursor-pointer animate-[sos-pulse_3s_ease-in-out_infinite]"
+            )}
+          >
+            {sending
+              ? <Loader2 className="w-6 h-6 text-white animate-spin" />
+              : <AlertTriangle className="w-6 h-6 text-white" />
+            }
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="left" className="max-w-[180px] text-center">
+          {onCooldown ? "SOS sent — wait 5 mins before sending again" : "SOS Emergency Alert — tap to send distress signal"}
+        </TooltipContent>
+      </Tooltip>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-rose-600">
+              <AlertTriangle className="w-5 h-5" />
+              Send SOS Alert?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2 pt-1">
+              <span className="block">
+                This go immediately send emergency alert to <strong>all your people</strong> in every circle you belong. Your current location go be included.
+              </span>
+              <span className="block text-sm font-medium text-foreground">
+                Only use this if you really need help o!
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleSend}
+              className="bg-rose-600 hover:bg-rose-700 text-white focus-visible:ring-rose-400"
+            >
+              {sending
+                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Sending…</>
+                : "Yes, Send SOS!"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
@@ -146,6 +262,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </nav>
         </div>
       </main>
+
+      {/* SOS Floating Button — always accessible */}
+      <SosButton />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, count, sql } from "drizzle-orm";
+import { eq, and, or, count, sql } from "drizzle-orm";
 import { db, circlesTable, circleMembersTable, placesTable, activityEventsTable, usersTable, locationsTable } from "@workspace/db";
 import {
   CreateCircleBody,
@@ -48,12 +48,13 @@ router.get("/circles", async (req, res): Promise<void> => {
   if (memberships.length === 0) { res.json([]); return; }
 
   const circleIds = memberships.map(m => m.circleId);
-  const circles = await db.select().from(circlesTable).where(sql`${circlesTable.id} = ANY(${circleIds})`);
+  const circles = await db.select().from(circlesTable)
+    .where(or(...circleIds.map(id => eq(circlesTable.id, id))));
 
   const memberCounts = await db
     .select({ circleId: circleMembersTable.circleId, cnt: count() })
     .from(circleMembersTable)
-    .where(sql`${circleMembersTable.circleId} = ANY(${circleIds})`)
+    .where(or(...circleIds.map(id => eq(circleMembersTable.circleId, id))))
     .groupBy(circleMembersTable.circleId);
 
   const countMap = Object.fromEntries(memberCounts.map(r => [r.circleId, Number(r.cnt)]));

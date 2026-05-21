@@ -5,3 +5,4 @@ export * from "./places";
 export * from "./activity";
 export * from "./notifications";
 export * from "./invites";
+export * from "./sos";

@@ -1,0 +1,1 @@
+- [Drizzle inArray pg bug](drizzle-inarray-pg-bug.md) — inArray() and sql`= ANY(${jsArray})` generate broken SQL with pg driver; use or(...ids.map(id => eq(col, id))) instead.
