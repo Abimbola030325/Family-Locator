@@ -1,22 +1,33 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Family Locator API — Life360-like app
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: Auth
+    description: Browser and mobile authentication endpoints.
+  - name: circles
+    description: Family circle management
+  - name: members
+    description: Circle member management
+  - name: locations
+    description: Location sharing
+  - name: places
+    description: Saved places management
+  - name: activity
+    description: Activity feed
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,7 +35,532 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/user:
+    get:
+      tags: [Auth]
+      operationId: getCurrentAuthUser
+      summary: Get the currently authenticated user
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+      responses:
+        '200':
+          description: Auth status resolved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthUserEnvelope'
+
+  /login:
+    get:
+      tags: [Auth]
+      operationId: beginBrowserLogin
+      summary: Start the browser OIDC login flow
+      parameters:
+        - name: returnTo
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect to the OIDC authorization endpoint.
+
+  /callback:
+    get:
+      tags: [Auth]
+      operationId: handleBrowserLoginCallback
+      summary: Complete the browser OIDC login flow
+      parameters:
+        - name: code
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: iss
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uri
+      responses:
+        '302':
+          description: Redirect to the returnTo path on success or /api/login on failure.
+
+  /logout:
+    get:
+      tags: [Auth]
+      operationId: logoutBrowserSession
+      summary: Clear the session and begin OIDC logout
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+      responses:
+        '302':
+          description: Redirect to the OIDC provider logout URL.
+
+  /mobile-auth/token-exchange:
+    post:
+      tags: [Auth]
+      operationId: exchangeMobileAuthorizationCode
+      summary: Exchange a mobile OIDC code for a session token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MobileTokenExchangeRequest'
+      responses:
+        '200':
+          description: Session created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileTokenExchangeSuccess'
+        '400':
+          description: Missing or invalid required fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: Token did not contain usable claims.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Token exchange failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+
+  /mobile-auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logoutMobileSession
+      summary: Delete a mobile session token
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+      responses:
+        '200':
+          description: Logout processed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutSuccess'
+
+  # ── Circles ──────────────────────────────────────────────────────────────
+
+  /circles:
+    get:
+      operationId: listCircles
+      tags: [circles]
+      summary: List circles the current user belongs to
+      responses:
+        "200":
+          description: List of circles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Circle"
+    post:
+      operationId: createCircle
+      tags: [circles]
+      summary: Create a new circle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CircleInput"
+      responses:
+        "201":
+          description: Created circle
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Circle"
+
+  /circles/{circleId}:
+    get:
+      operationId: getCircle
+      tags: [circles]
+      summary: Get a circle by ID
+      parameters:
+        - name: circleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Circle details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Circle"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+    patch:
+      operationId: updateCircle
+      tags: [circles]
+      summary: Update a circle
+      parameters:
+        - name: circleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CircleUpdate"
+      responses:
+        "200":
+          description: Updated circle
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Circle"
+    delete:
+      operationId: deleteCircle
+      tags: [circles]
+      summary: Delete a circle
+      parameters:
+        - name: circleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /circles/{circleId}/summary:
+    get:
+      operationId: getCircleSummary
+      tags: [circles]
+      summary: Get aggregated stats for a circle (member count, place count, recent events)
+      parameters:
+        - name: circleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Circle summary stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CircleSummary"
+
+  # ── Members ──────────────────────────────────────────────────────────────
+
+  /circles/{circleId}/members:
+    get:
+      operationId: listCircleMembers
+      tags: [members]
+      summary: List members of a circle with their latest location
+      parameters:
+        - name: circleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Member"
+
+  /circles/{circleId}/members/invite:
+    post:
+      operationId: inviteMember
+      tags: [members]
+      summary: Invite a user to a circle by email
+      parameters:
+        - name: circleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InviteInput"
+      responses:
+        "201":
+          description: Invitation sent / member added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+        "404":
+          description: Circle or user not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /circles/{circleId}/members/{memberId}:
+    delete:
+      operationId: removeCircleMember
+      tags: [members]
+      summary: Remove a member from a circle
+      parameters:
+        - name: circleId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Removed
+
+  # ── Locations ─────────────────────────────────────────────────────────────
+
+  /locations/me:
+    put:
+      operationId: updateMyLocation
+      tags: [locations]
+      summary: Update the current user's location
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LocationInput"
+      responses:
+        "200":
+          description: Updated location
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LocationRecord"
+
+  /locations/history:
+    get:
+      operationId: getMyLocationHistory
+      tags: [locations]
+      summary: Get recent location history for the current user
+      responses:
+        "200":
+          description: Location history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LocationRecord"
+
+  /circles/{circleId}/locations:
+    get:
+      operationId: getCircleMemberLocations
+      tags: [locations]
+      summary: Get latest locations for all members in a circle
+      parameters:
+        - name: circleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Member locations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MemberLocation"
+
+  # ── Places ────────────────────────────────────────────────────────────────
+
+  /circles/{circleId}/places:
+    get:
+      operationId: listPlaces
+      tags: [places]
+      summary: List saved places for a circle
+      parameters:
+        - name: circleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of places
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Place"
+    post:
+      operationId: createPlace
+      tags: [places]
+      summary: Create a saved place for a circle
+      parameters:
+        - name: circleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceInput"
+      responses:
+        "201":
+          description: Created place
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Place"
+
+  /circles/{circleId}/places/{placeId}:
+    patch:
+      operationId: updatePlace
+      tags: [places]
+      summary: Update a saved place
+      parameters:
+        - name: circleId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: placeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceUpdate"
+      responses:
+        "200":
+          description: Updated place
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Place"
+    delete:
+      operationId: deletePlace
+      tags: [places]
+      summary: Delete a saved place
+      parameters:
+        - name: circleId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: placeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Activity ──────────────────────────────────────────────────────────────
+
+  /circles/{circleId}/activity:
+    get:
+      operationId: getCircleActivity
+      tags: [activity]
+      summary: Get recent activity events for a circle (arrivals, departures, check-ins)
+      parameters:
+        - name: circleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Activity events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityEvent"
+
+  /circles/{circleId}/checkin:
+    post:
+      operationId: checkIn
+      tags: [activity]
+      summary: Post a check-in for a member at a location
+      parameters:
+        - name: circleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckInInput"
+      responses:
+        "201":
+          description: Check-in recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActivityEvent"
+
 components:
+  parameters:
+    AuthorizationSessionHeader:
+      name: Authorization
+      in: header
+      required: false
+      description: Opaque session token — `Bearer <sid>`.
+      schema:
+        type: string
+    SessionCookie:
+      name: sid
+      in: cookie
+      required: false
+      description: Browser session cookie.
+      schema:
+        type: string
+
   schemas:
     HealthStatus:
       type: object
@@ -34,3 +570,302 @@ components:
       required:
         - status
 
+    # ── Auth ─────────────────────────────────────────────────────────────────
+    AuthUser:
+      type: object
+      required: [id, email, firstName, lastName, profileImageUrl]
+      properties:
+        id:
+          type: string
+        email:
+          type: [string, 'null']
+          format: email
+        firstName:
+          type: [string, 'null']
+        lastName:
+          type: [string, 'null']
+        profileImageUrl:
+          type: [string, 'null']
+    AuthUserEnvelope:
+      type: object
+      required: [user]
+      properties:
+        user:
+          oneOf:
+            - $ref: '#/components/schemas/AuthUser'
+            - type: 'null'
+    MobileTokenExchangeRequest:
+      type: object
+      required: [code, code_verifier, redirect_uri, state]
+      properties:
+        code:
+          type: string
+          minLength: 1
+        code_verifier:
+          type: string
+          minLength: 1
+        redirect_uri:
+          type: string
+          minLength: 1
+          format: uri
+        state:
+          type: string
+          minLength: 1
+        nonce:
+          type: string
+          minLength: 1
+    MobileTokenExchangeSuccess:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+    LogoutSuccess:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          const: true
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    # ── Circles ───────────────────────────────────────────────────────────────
+    Circle:
+      type: object
+      required: [id, name, color, ownerId, memberCount, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: [string, 'null']
+        color:
+          type: string
+        ownerId:
+          type: string
+        memberCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    CircleInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        color:
+          type: string
+
+    CircleUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        color:
+          type: string
+
+    CircleSummary:
+      type: object
+      required: [circleId, memberCount, placeCount, recentEventCount, onlineCount]
+      properties:
+        circleId:
+          type: integer
+        memberCount:
+          type: integer
+        placeCount:
+          type: integer
+        recentEventCount:
+          type: integer
+        onlineCount:
+          type: integer
+
+    # ── Members ───────────────────────────────────────────────────────────────
+    Member:
+      type: object
+      required: [id, userId, circleId, role, joinedAt, user]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        circleId:
+          type: integer
+        role:
+          type: string
+          enum: [owner, member]
+        joinedAt:
+          type: string
+          format: date-time
+        user:
+          $ref: "#/components/schemas/AuthUser"
+        lastLocation:
+          oneOf:
+            - $ref: "#/components/schemas/LocationRecord"
+            - type: 'null'
+
+    InviteInput:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+
+    # ── Locations ─────────────────────────────────────────────────────────────
+    LocationRecord:
+      type: object
+      required: [id, userId, latitude, longitude, timestamp]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        accuracy:
+          type: [number, 'null']
+        address:
+          type: [string, 'null']
+        speed:
+          type: [number, 'null']
+        batteryLevel:
+          type: [integer, 'null']
+        timestamp:
+          type: string
+          format: date-time
+
+    LocationInput:
+      type: object
+      required: [latitude, longitude]
+      properties:
+        latitude:
+          type: number
+        longitude:
+          type: number
+        accuracy:
+          type: number
+        address:
+          type: string
+        speed:
+          type: number
+        batteryLevel:
+          type: integer
+
+    MemberLocation:
+      type: object
+      required: [userId, user]
+      properties:
+        userId:
+          type: string
+        user:
+          $ref: "#/components/schemas/AuthUser"
+        location:
+          oneOf:
+            - $ref: "#/components/schemas/LocationRecord"
+            - type: 'null'
+
+    # ── Places ────────────────────────────────────────────────────────────────
+    Place:
+      type: object
+      required: [id, circleId, name, latitude, longitude, radius, icon, createdAt]
+      properties:
+        id:
+          type: integer
+        circleId:
+          type: integer
+        name:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        radius:
+          type: number
+        icon:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    PlaceInput:
+      type: object
+      required: [name, latitude, longitude]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        latitude:
+          type: number
+        longitude:
+          type: number
+        radius:
+          type: number
+        icon:
+          type: string
+
+    PlaceUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        latitude:
+          type: number
+        longitude:
+          type: number
+        radius:
+          type: number
+        icon:
+          type: string
+
+    # ── Activity ──────────────────────────────────────────────────────────────
+    ActivityEvent:
+      type: object
+      required: [id, circleId, userId, type, description, timestamp, user]
+      properties:
+        id:
+          type: integer
+        circleId:
+          type: integer
+        userId:
+          type: string
+        type:
+          type: string
+          enum: [arrival, departure, checkin, location_shared, member_joined, member_left]
+        description:
+          type: string
+        placeId:
+          type: [integer, 'null']
+        placeName:
+          type: [string, 'null']
+        timestamp:
+          type: string
+          format: date-time
+        user:
+          $ref: "#/components/schemas/AuthUser"
+
+    CheckInInput:
+      type: object
+      required: [description]
+      properties:
+        description:
+          type: string
+          minLength: 1
+        placeId:
+          type: integer
