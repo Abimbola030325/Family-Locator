@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "Xqd8ksxYn-7LeJK7cdFW3"
+uri = "file://DEVELOPER.md"
+type = "text"
+title = "Where You Dey? — Developer Guide"
