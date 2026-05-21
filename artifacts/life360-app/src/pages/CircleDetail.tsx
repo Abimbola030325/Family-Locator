@@ -72,9 +72,22 @@ export default function CircleDetail() {
         qc.invalidateQueries({ queryKey: getGetCircleSummaryQueryKey(circleId) });
         setInviteEmail("");
         setInviteOpen(false);
-        toast({ title: "Invite sent!", description: "Member go receive notification." });
+        toast({ title: "Member added!", description: "Person don join your circle." });
       },
-      onError: () => toast({ title: "Invite failed", variant: "destructive" }),
+      onError: (err: any) => {
+        const msg = err?.response?.data?.error ?? err?.message ?? "";
+        if (msg.toLowerCase().includes("not found")) {
+          toast({
+            title: "Person never use the app before",
+            description: "Share the invite link with them — once them sign in, you fit add them.",
+            variant: "destructive",
+          });
+        } else if (msg.toLowerCase().includes("already")) {
+          toast({ title: "Person don dey your circle already", variant: "destructive" });
+        } else {
+          toast({ title: "Could not add member", description: msg || "Try again.", variant: "destructive" });
+        }
+      },
     });
   };
 
@@ -222,18 +235,56 @@ export default function CircleDetail() {
                 </Button>
               </DialogTrigger>
               <DialogContent>
-                <DialogHeader><DialogTitle>Invite a Member</DialogTitle></DialogHeader>
-                <form onSubmit={handleInvite} className="space-y-4 pt-4">
-                  <div className="space-y-2">
-                    <Label>Email Address</Label>
-                    <Input type="email" placeholder="friend@example.com" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} autoFocus />
-                  </div>
-                  <div className="flex justify-end">
-                    <Button type="submit" disabled={inviteMember.isPending || !inviteEmail.trim()}>
-                      {inviteMember.isPending ? "Inviting..." : "Send Invite"}
+                <DialogHeader>
+                  <DialogTitle>Invite a Member</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-5 pt-2">
+                  {/* Primary: Invite Link */}
+                  <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-2">
+                    <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <Link2 className="w-4 h-4 text-primary" />
+                      Share Invite Link
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Send this link via WhatsApp, SMS, or any app. Once they sign in, they join your circle automatically.
+                    </p>
+                    <Button
+                      type="button"
+                      className="w-full"
+                      disabled={linkLoading}
+                      onClick={() => { setInviteOpen(false); handleInviteLink(); }}
+                    >
+                      {linkLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Link2 className="w-4 h-4 mr-2" />}
+                      {linkCopied ? "Link Copied!" : "Copy Invite Link"}
                     </Button>
                   </div>
-                </form>
+
+                  {/* Divider */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-px bg-border" />
+                    <span className="text-xs text-muted-foreground">or, if they're already on the app</span>
+                    <div className="flex-1 h-px bg-border" />
+                  </div>
+
+                  {/* Secondary: Email add for existing users */}
+                  <form onSubmit={handleInvite} className="space-y-3">
+                    <div className="space-y-2">
+                      <Label>Their Account Email</Label>
+                      <Input
+                        type="email"
+                        placeholder="friend@example.com"
+                        value={inviteEmail}
+                        onChange={e => setInviteEmail(e.target.value)}
+                      />
+                      <p className="text-[11px] text-muted-foreground">Only works if they've already signed in to Where You Dey? before.</p>
+                    </div>
+                    <div className="flex justify-end">
+                      <Button type="submit" variant="secondary" disabled={inviteMember.isPending || !inviteEmail.trim()}>
+                        {inviteMember.isPending ? "Adding..." : "Add by Email"}
+                      </Button>
+                    </div>
+                  </form>
+                </div>
               </DialogContent>
             </Dialog>
           </div>
