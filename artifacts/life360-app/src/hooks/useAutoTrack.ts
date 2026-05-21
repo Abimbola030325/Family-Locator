@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useUpdateMyLocation } from "@workspace/api-client-react";
+import { useBattery } from "./useBattery";
 
 const MIN_INTERVAL_MS = 30_000; // at most once per 30 s
 const MIN_DISTANCE_M  = 40;    // or at least 40 m of movement
@@ -14,15 +15,22 @@ function haversine(lat1: number, lng1: number, lat2: number, lng2: number): numb
 }
 
 export interface AutoTrackState {
-  isTracking: boolean;
-  lastUpdate: Date | null;
-  error: string | null;
+  isTracking:  boolean;
+  lastUpdate:  Date | null;
+  error:       string | null;
+  batteryLevel: number | null;
+  charging:    boolean;
 }
 
 export function useAutoTrack(enabled: boolean): AutoTrackState {
   const updateLocation = useUpdateMyLocation();
-  const watchIdRef    = useRef<number | null>(null);
-  const lastPostedRef = useRef<{ lat: number; lng: number; time: number } | null>(null);
+  const watchIdRef     = useRef<number | null>(null);
+  const lastPostedRef  = useRef<{ lat: number; lng: number; time: number } | null>(null);
+  const { level: batteryLevel, charging } = useBattery();
+  const batteryRef = useRef<number | null>(batteryLevel);
+
+  // Keep a ref so postLocation always reads the latest battery value
+  useEffect(() => { batteryRef.current = batteryLevel; }, [batteryLevel]);
 
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [error, setError]           = useState<string | null>(null);
@@ -44,7 +52,15 @@ export function useAutoTrack(enabled: boolean): AutoTrackState {
       setError(null);
 
       updateLocation.mutate(
-        { data: { latitude: lat, longitude: lng, accuracy, speed: speed ?? undefined } },
+        {
+          data: {
+            latitude:     lat,
+            longitude:    lng,
+            accuracy,
+            speed:        speed ?? undefined,
+            batteryLevel: batteryRef.current ?? undefined,
+          },
+        },
         { onError: () => setError("Failed to share location") }
       );
     },
@@ -96,5 +112,5 @@ export function useAutoTrack(enabled: boolean): AutoTrackState {
     };
   }, [enabled, postLocation]);
 
-  return { isTracking: enabled && isWatching, lastUpdate, error };
+  return { isTracking: enabled && isWatching, lastUpdate, error, batteryLevel, charging };
 }
