@@ -30,3 +30,10 @@ externalPort = 80
 [[ports]]
 localPort = 25491
 externalPort = 3000
+
+[userenv]
+
+[userenv.shared]
+VAPID_PUBLIC_KEY = "BHMuNs2FXNFNrKQaOW_uKzHdkf8cZNzguXkRXyN0fmn2yNKcLzSlrrtxO6NESBkt8Uw8m3-2dojA9nftVXr9E4w"
+VAPID_PRIVATE_KEY = "G1CNESo9GGnsP8L_2H6NSZEO0vf3IpSWG0BLwIo4V3g"
+VAPID_EMAIL = "mailto:admin@whereyoudey.app"

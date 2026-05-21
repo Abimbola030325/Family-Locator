@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@workspace/replit-auth-web";
 import { useUpdateMyLocation, useGetMyLocationHistory } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -7,9 +7,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Clock, Battery, LogOut, Navigation, History } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { MapPin, Clock, Battery, LogOut, Navigation, History, Bell, BellOff } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { subscribeToPush, unsubscribeFromPush, currentSubscription } from "@/lib/push";
 
 export default function Profile() {
   const { user, logout } = useAuth();
@@ -20,6 +23,46 @@ export default function Profile() {
   const { data: history, isLoading: loadingHistory } = useGetMyLocationHistory();
 
   const [sharing, setSharing] = useState(false);
+  const [notifEnabled, setNotifEnabled] = useState(false);
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [notifSupported, setNotifSupported] = useState(false);
+
+  // Check current push subscription state on mount
+  useEffect(() => {
+    const check = async () => {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+      setNotifSupported(true);
+      const sub = await currentSubscription();
+      setNotifEnabled(!!sub);
+    };
+    check();
+  }, []);
+
+  const handleNotifToggle = async (enabled: boolean) => {
+    setNotifLoading(true);
+    try {
+      if (enabled) {
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") {
+          toast({ title: "Permission denied", description: "Enable notifications in your browser settings.", variant: "destructive" });
+          setNotifLoading(false);
+          return;
+        }
+        const sub = await subscribeToPush();
+        if (sub) {
+          setNotifEnabled(true);
+          toast({ title: "Alerts enabled!", description: "You go receive alert when your people move." });
+        }
+      } else {
+        await unsubscribeFromPush();
+        setNotifEnabled(false);
+        toast({ title: "Alerts turned off" });
+      }
+    } catch {
+      toast({ title: "Something went wrong", variant: "destructive" });
+    }
+    setNotifLoading(false);
+  };
 
   const handleShareLocation = () => {
     setSharing(true);
@@ -32,7 +75,6 @@ export default function Profile() {
               longitude: pos.coords.longitude,
               accuracy: pos.coords.accuracy,
               speed: pos.coords.speed || undefined,
-              batteryLevel: undefined,
             },
           }, {
             onSuccess: () => {
@@ -76,6 +118,7 @@ export default function Profile() {
     <div className="p-6 max-w-2xl mx-auto space-y-6">
       <h1 className="text-3xl font-bold tracking-tight">Profile</h1>
 
+      {/* Identity card */}
       <Card>
         <CardContent className="p-6 flex items-center gap-5">
           <Avatar className="h-20 w-20 border-4 border-primary/20 shadow-lg">
@@ -92,6 +135,41 @@ export default function Profile() {
         </CardContent>
       </Card>
 
+      {/* Push Alerts */}
+      {notifSupported && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              {notifEnabled ? <Bell className="w-4 h-4 text-primary" /> : <BellOff className="w-4 h-4 text-muted-foreground" />}
+              Movement Alerts
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Get a notification when your people arrive or comot from saved places — even when this app is not open.
+            </p>
+            <div className="flex items-center gap-3">
+              <Switch
+                id="notif-toggle"
+                checked={notifEnabled}
+                onCheckedChange={handleNotifToggle}
+                disabled={notifLoading}
+              />
+              <Label htmlFor="notif-toggle" className="cursor-pointer select-none">
+                {notifEnabled ? "Alerts are ON — you go know when they move" : "Alerts are OFF"}
+              </Label>
+            </div>
+            {notifEnabled && (
+              <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg px-3 py-2">
+                <Bell className="w-3 h-3 shrink-0" />
+                Your browser go send you notification when your people reach or comot from any saved place.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Location Sharing */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
@@ -114,6 +192,7 @@ export default function Profile() {
         </CardContent>
       </Card>
 
+      {/* Location History */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
@@ -161,6 +240,7 @@ export default function Profile() {
         </CardContent>
       </Card>
 
+      {/* Sign out */}
       <Card className="border-destructive/30">
         <CardContent className="p-4">
           <Button variant="outline" className="w-full border-destructive/40 text-destructive hover:bg-destructive/5 hover:text-destructive" onClick={logout}>
