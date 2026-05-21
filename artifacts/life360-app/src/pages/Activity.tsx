@@ -90,7 +90,7 @@ export default function Activity() {
       {!loadingCircles && !circles?.length && (
         <div className="text-center py-20 bg-secondary/30 rounded-xl border border-dashed border-border">
           <ActivityIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-40" />
-          <h3 className="text-lg font-medium">No activity yet</h3>
+          <h3 className="text-lg font-medium">Nothing dey happen yet</h3>
           <p className="text-muted-foreground mt-1 text-sm">Join or create a circle to see events here.</p>
         </div>
       )}

@@ -53,7 +53,7 @@ export default function Home() {
       {/* Members Bottom Sheet for Mobile, Side Panel for Desktop */}
       <div className="absolute bottom-0 left-0 right-0 md:w-80 md:right-auto md:top-20 md:bottom-auto md:left-4 bg-card/95 backdrop-blur border-t md:border border-border rounded-t-xl md:rounded-lg shadow-xl max-h-[50vh] flex flex-col">
         <div className="p-4 border-b border-border font-semibold flex items-center justify-between">
-          <span>Family Status</span>
+          <span>Your People</span>
           <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
             {members?.length || 0} online
           </span>
@@ -61,7 +61,7 @@ export default function Home() {
         <div className="overflow-y-auto p-2 space-y-1">
           {loadingMembers && <div className="p-4 text-center text-sm text-muted-foreground">Loading members...</div>}
           {!loadingMembers && members?.length === 0 && (
-            <div className="p-4 text-center text-sm text-muted-foreground">No members in this circle.</div>
+            <div className="p-4 text-center text-sm text-muted-foreground">No people dey this circle yet.</div>
           )}
           {members?.map((member) => (
             <div key={member.id} className="flex items-center gap-4 p-3 rounded-lg hover:bg-secondary/50 transition-colors">
@@ -77,7 +77,7 @@ export default function Home() {
                 </div>
                 <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5 truncate">
                   <MapPin className="h-3 w-3 shrink-0" />
-                  <span className="truncate">{member.lastLocation?.address || "Unknown Location"}</span>
+                  <span className="truncate">{member.lastLocation?.address || "Location no show"}</span>
                 </div>
               </div>
               <div className="flex flex-col items-end gap-1">

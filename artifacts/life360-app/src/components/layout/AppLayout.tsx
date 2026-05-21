@@ -22,7 +22,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-64 flex-col border-r border-border bg-card">
         <div className="p-6">
-          <h1 className="text-2xl font-bold tracking-tight text-primary">CircleTrack</h1>
+          <h1 className="text-xl font-bold tracking-tight text-primary leading-tight">Where You Dey?</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">Know where your people dey</p>
         </div>
         <nav className="flex-1 px-4 space-y-2">
           {navItems.map((item) => {
@@ -57,7 +58,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="flex-1 overflow-auto bg-background">
           {children}
         </div>
-        
+
         {/* Mobile Bottom Nav */}
         <div className="md:hidden border-t border-border bg-card safe-area-bottom">
           <nav className="flex justify-around p-2">

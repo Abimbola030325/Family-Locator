@@ -47,7 +47,8 @@ export default function Places() {
   const deletePlace = useDeletePlace();
 
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", latitude: "37.7749", longitude: "-122.4194", icon: "home", radius: "100" });
+  // Lagos Island default coordinates
+  const [form, setForm] = useState({ name: "", latitude: "6.5244", longitude: "3.3792", icon: "home", radius: "100" });
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,7 +162,7 @@ export default function Places() {
         <div className="text-center py-20 bg-secondary/30 rounded-xl border border-dashed border-border">
           <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-40" />
           <h3 className="text-lg font-medium">No places yet</h3>
-          <p className="text-muted-foreground mt-1 mb-4 text-sm">Add locations like Home or Work to get alerts.</p>
+          <p className="text-muted-foreground mt-1 mb-4 text-sm">Add places like House, Office, or School to get alerts.</p>
           <Button onClick={() => setOpen(true)} variant="outline" disabled={!activeCircleId}>Add your first place</Button>
         </div>
       ) : (

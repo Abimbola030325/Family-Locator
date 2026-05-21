@@ -47,9 +47,9 @@ export default function Profile() {
           });
         },
         () => {
-          // Fallback: share a simulated location
+          // Fallback: share a Lagos-area location
           updateLocation.mutate({
-            data: { latitude: 37.7749 + (Math.random() - 0.5) * 0.05, longitude: -122.4194 + (Math.random() - 0.5) * 0.05, accuracy: 10 },
+            data: { latitude: 6.5244 + (Math.random() - 0.5) * 0.08, longitude: 3.3792 + (Math.random() - 0.5) * 0.08, accuracy: 10 },
           }, {
             onSuccess: () => {
               queryClient.invalidateQueries({ queryKey: getGetMyLocationHistoryQueryKey() });
@@ -61,7 +61,7 @@ export default function Profile() {
       );
     } else {
       updateLocation.mutate({
-        data: { latitude: 37.7749, longitude: -122.4194, accuracy: 50 },
+        data: { latitude: 6.5244, longitude: 3.3792, accuracy: 50 },
       }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetMyLocationHistoryQueryKey() });
@@ -101,7 +101,7 @@ export default function Profile() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Share your current location with all your circles. Your family can see where you are on the map.
+            Share your current location with all your circles. Your people go see where you dey for the map.
           </p>
           <Button
             onClick={handleShareLocation}
@@ -129,7 +129,7 @@ export default function Profile() {
           ) : !history?.length ? (
             <div className="text-center py-8 text-muted-foreground">
               <MapPin className="w-8 h-8 mx-auto mb-2 opacity-40" />
-              <p className="text-sm">No location history yet. Share your location to get started.</p>
+              <p className="text-sm">No location history yet. Share your location make your people see you.</p>
             </div>
           ) : (
             <div className="space-y-2">

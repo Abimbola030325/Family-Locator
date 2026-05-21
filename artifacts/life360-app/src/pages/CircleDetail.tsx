@@ -205,7 +205,7 @@ export default function CircleDetail() {
                       </div>
                       <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
                         <MapPin className="w-3 h-3" />
-                        <span className="truncate">{member.lastLocation?.address || "No location"}</span>
+                        <span className="truncate">{member.lastLocation?.address || "Location no show"}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -237,8 +237,8 @@ export default function CircleDetail() {
           {!places?.length ? (
             <div className="text-center py-12 text-muted-foreground">
               <MapPin className="w-10 h-10 mx-auto mb-3 opacity-40" />
-              <p className="font-medium">No saved places</p>
-              <p className="text-sm mt-1">Add places like Home or Work to get arrival alerts.</p>
+              <p className="font-medium">No saved places yet</p>
+              <p className="text-sm mt-1">Add places like House, Office, or Market to get arrival alerts.</p>
               <Link href="/places">
                 <Button variant="outline" size="sm" className="mt-4">Manage Places</Button>
               </Link>
@@ -270,8 +270,8 @@ export default function CircleDetail() {
           ) : !activity?.length ? (
             <div className="text-center py-12 text-muted-foreground">
               <Activity className="w-10 h-10 mx-auto mb-3 opacity-40" />
-              <p className="font-medium">No activity yet</p>
-              <p className="text-sm mt-1">Events will appear when members share locations or check in.</p>
+              <p className="font-medium">Nothing dey happen yet</p>
+              <p className="text-sm mt-1">Events go show when your people share location or check in.</p>
             </div>
           ) : (
             <div className="space-y-2">

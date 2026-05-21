@@ -43,7 +43,7 @@ export default function Circles() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">My Circles</h1>
-          <p className="text-muted-foreground mt-1">Manage your family and friend groups.</p>
+          <p className="text-muted-foreground mt-1">Manage your family and friend circles.</p>
         </div>
         
         <Dialog open={open} onOpenChange={setOpen}>
@@ -86,7 +86,7 @@ export default function Circles() {
         <div className="text-center py-20 bg-secondary/30 rounded-xl border border-dashed border-border">
           <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
           <h3 className="text-lg font-medium text-foreground">No circles yet</h3>
-          <p className="text-muted-foreground mt-1 mb-4">Create your first circle to start sharing locations.</p>
+          <p className="text-muted-foreground mt-1 mb-4">Create your first circle to start tracking your people.</p>
           <Button onClick={() => setOpen(true)} variant="outline">Create your first circle</Button>
         </div>
       ) : (
