@@ -4,3 +4,4 @@ export * from "./locations";
 export * from "./places";
 export * from "./activity";
 export * from "./notifications";
+export * from "./invites";

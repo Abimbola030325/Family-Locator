@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Users, Activity, Star, Battery, UserPlus, Trash2, ChevronLeft, Clock, MessageSquare } from "lucide-react";
+import { MapPin, Users, Activity, Star, Battery, UserPlus, Trash2, ChevronLeft, Clock, MessageSquare, Link2, Check } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
@@ -48,6 +48,8 @@ export default function CircleDetail() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [checkInMsg, setCheckInMsg] = useState("");
   const [checkInOpen, setCheckInOpen] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [linkLoading, setLinkLoading] = useState(false);
 
   const handleInvite = (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,6 +73,29 @@ export default function CircleDetail() {
         toast({ title: "Member removed" });
       },
     });
+  };
+
+  const handleShareLink = async () => {
+    setLinkLoading(true);
+    try {
+      const res  = await fetch(`/api/circles/${circleId}/invite-link`, {
+        method:      "POST",
+        credentials: "include",
+        headers:     { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed");
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const url  = `${window.location.origin}${base}/join/${data.token}`;
+      await navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+      toast({ title: "Invite link copied! 🔗", description: "Share am on WhatsApp or anywhere you want." });
+      setTimeout(() => setLinkCopied(false), 3000);
+    } catch {
+      toast({ title: "Could not generate link", variant: "destructive" });
+    } finally {
+      setLinkLoading(false);
+    }
   };
 
   const handleCheckIn = (e: React.FormEvent) => {
@@ -108,6 +133,18 @@ export default function CircleDetail() {
             {circle?.description && <p className="text-sm text-muted-foreground">{circle.description}</p>}
           </div>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleShareLink}
+          disabled={linkLoading}
+          className={linkCopied ? "text-emerald-600 border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30" : ""}
+        >
+          {linkCopied
+            ? <><Check className="w-4 h-4 mr-2" />Copied!</>
+            : <><Link2 className="w-4 h-4 mr-2" />Share Link</>
+          }
+        </Button>
         <Dialog open={checkInOpen} onOpenChange={setCheckInOpen}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm">

@@ -14,6 +14,7 @@ import CircleDetail from "@/pages/CircleDetail";
 import Places from "@/pages/Places";
 import Activity from "@/pages/Activity";
 import Profile from "@/pages/Profile";
+import Join from "@/pages/Join";
 import AppLayout from "@/components/layout/AppLayout";
 
 const queryClient = new QueryClient();
@@ -43,13 +44,14 @@ function ProtectedRoute({ component: Component, ...rest }: any) {
 function Router() {
   return (
     <Switch>
-      <Route path="/login" component={Login} />
-      <Route path="/"            component={() => <ProtectedRoute component={Home} />} />
-      <Route path="/circles"     component={() => <ProtectedRoute component={Circles} />} />
-      <Route path="/circles/:id" component={() => <ProtectedRoute component={CircleDetail} />} />
-      <Route path="/places"      component={() => <ProtectedRoute component={Places} />} />
-      <Route path="/activity"    component={() => <ProtectedRoute component={Activity} />} />
-      <Route path="/profile"     component={() => <ProtectedRoute component={Profile} />} />
+      <Route path="/login"           component={Login} />
+      <Route path="/join/:token"     component={Join} />
+      <Route path="/"                component={() => <ProtectedRoute component={Home} />} />
+      <Route path="/circles"         component={() => <ProtectedRoute component={Circles} />} />
+      <Route path="/circles/:id"     component={() => <ProtectedRoute component={CircleDetail} />} />
+      <Route path="/places"          component={() => <ProtectedRoute component={Places} />} />
+      <Route path="/activity"        component={() => <ProtectedRoute component={Activity} />} />
+      <Route path="/profile"         component={() => <ProtectedRoute component={Profile} />} />
       <Route component={NotFound} />
     </Switch>
   );
