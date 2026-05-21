@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import { useAuth } from "@workspace/replit-auth-web";
+import { AutoTrackProvider } from "@/context/AutoTrackContext";
 
 // Pages
 import Home from "@/pages/Home";
@@ -43,12 +44,12 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
-      <Route path="/" component={() => <ProtectedRoute component={Home} />} />
-      <Route path="/circles" component={() => <ProtectedRoute component={Circles} />} />
+      <Route path="/"            component={() => <ProtectedRoute component={Home} />} />
+      <Route path="/circles"     component={() => <ProtectedRoute component={Circles} />} />
       <Route path="/circles/:id" component={() => <ProtectedRoute component={CircleDetail} />} />
-      <Route path="/places" component={() => <ProtectedRoute component={Places} />} />
-      <Route path="/activity" component={() => <ProtectedRoute component={Activity} />} />
-      <Route path="/profile" component={() => <ProtectedRoute component={Profile} />} />
+      <Route path="/places"      component={() => <ProtectedRoute component={Places} />} />
+      <Route path="/activity"    component={() => <ProtectedRoute component={Activity} />} />
+      <Route path="/profile"     component={() => <ProtectedRoute component={Profile} />} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -58,10 +59,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
-        </WouterRouter>
-        <Toaster />
+        <AutoTrackProvider>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <Router />
+          </WouterRouter>
+          <Toaster />
+        </AutoTrackProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
