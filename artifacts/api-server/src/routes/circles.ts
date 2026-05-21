@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and, or, count, sql } from "drizzle-orm";
-import { db, circlesTable, circleMembersTable, placesTable, activityEventsTable, usersTable, locationsTable } from "@workspace/db";
+import { db, circlesTable, circleMembersTable, placesTable, activityEventsTable, usersTable, locationsTable, circleMessagesTable } from "@workspace/db";
 import {
   CreateCircleBody,
   GetCircleParams,
@@ -21,6 +21,9 @@ import {
   GetCircleActivityParams,
   CheckInParams,
   CheckInBody,
+  ListCircleMessagesParams,
+  SendCircleMessageParams,
+  SendCircleMessageBody,
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
@@ -385,6 +388,52 @@ router.post("/circles/:circleId/checkin", async (req, res): Promise<void> => {
     type: event.type, description: event.description,
     placeId: event.placeId ?? null, placeName: event.placeName ?? null,
     timestamp: event.timestamp.toISOString(), user,
+  });
+});
+
+// ── Chat ─────────────────────────────────────────────────────────────────
+
+router.get("/circles/:circleId/messages", async (req, res): Promise<void> => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const params = ListCircleMessagesParams.safeParse({ circleId: parseId(req.params.circleId) });
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+
+  const msgs = await db.select().from(circleMessagesTable)
+    .where(eq(circleMessagesTable.circleId, params.data.circleId))
+    .orderBy(circleMessagesTable.createdAt)
+    .limit(50);
+
+  const result = await Promise.all(msgs.map(async (m) => {
+    const user = await getUserById(m.userId);
+    return {
+      id: m.id, circleId: m.circleId, userId: m.userId,
+      content: m.content, createdAt: m.createdAt.toISOString(), user,
+    };
+  }));
+
+  res.json(result);
+});
+
+router.post("/circles/:circleId/messages", async (req, res): Promise<void> => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const params = SendCircleMessageParams.safeParse({ circleId: parseId(req.params.circleId) });
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+
+  const body = SendCircleMessageBody.safeParse(req.body);
+  if (!body.success) { res.status(400).json({ error: body.error.message }); return; }
+
+  const [msg] = await db.insert(circleMessagesTable).values({
+    circleId: params.data.circleId,
+    userId: req.user.id,
+    content: body.data.content,
+  }).returning();
+
+  const user = await getUserById(req.user.id);
+  res.status(201).json({
+    id: msg.id, circleId: msg.circleId, userId: msg.userId,
+    content: msg.content, createdAt: msg.createdAt.toISOString(), user,
   });
 });
 

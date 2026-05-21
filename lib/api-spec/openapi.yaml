@@ -544,6 +544,50 @@ paths:
               schema:
                 $ref: "#/components/schemas/ActivityEvent"
 
+  /circles/{circleId}/messages:
+    get:
+      operationId: listCircleMessages
+      tags: [circles]
+      summary: Get messages for a circle
+      parameters:
+        - name: circleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CircleMessage"
+    post:
+      operationId: sendCircleMessage
+      tags: [circles]
+      summary: Send a message to a circle
+      parameters:
+        - name: circleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessageInput"
+      responses:
+        "201":
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CircleMessage"
+
 components:
   parameters:
     AuthorizationSessionHeader:
@@ -869,3 +913,31 @@ components:
           minLength: 1
         placeId:
           type: integer
+
+    # ── Chat ─────────────────────────────────────────────────────────────────
+    CircleMessage:
+      type: object
+      required: [id, circleId, userId, content, createdAt, user]
+      properties:
+        id:
+          type: integer
+        circleId:
+          type: integer
+        userId:
+          type: string
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        user:
+          $ref: "#/components/schemas/AuthUser"
+
+    MessageInput:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 500

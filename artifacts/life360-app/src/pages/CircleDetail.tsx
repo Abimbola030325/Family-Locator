@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, Link } from "wouter";
 import {
   useGetCircle, useGetCircleSummary, useListCircleMembers, useGetCircleActivity,
   useListPlaces, useInviteMember, useRemoveCircleMember, useCheckIn,
   getGetCircleQueryKey, getListCircleMembersQueryKey, getGetCircleActivityQueryKey,
   getGetCircleSummaryQueryKey, getListPlacesQueryKey,
+  useListCircleMessages, useSendCircleMessage, getListCircleMessagesQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@workspace/replit-auth-web";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Users, Activity, Star, Battery, UserPlus, Trash2, ChevronLeft, Clock, MessageSquare, Link2, Check } from "lucide-react";
+import { MapPin, Users, Activity, Star, Battery, UserPlus, Trash2, ChevronLeft, Clock, MessageSquare, Link2, Check, Send, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
@@ -29,152 +31,166 @@ const EVENT_ICONS: Record<string, React.ReactNode> = {
 };
 
 export default function CircleDetail() {
-  const params = useParams<{ id: string }>();
-  const circleId = Number(params.id);
-  const queryClient = useQueryClient();
+  const params    = useParams<{ id: string }>();
+  const circleId  = Number(params.id);
+  const qc        = useQueryClient();
   const { toast } = useToast();
+  const { user }  = useAuth();
 
-  const { data: circle, isLoading: loadingCircle } = useGetCircle(circleId, { query: { enabled: !!circleId } });
-  const { data: summary } = useGetCircleSummary(circleId, { query: { enabled: !!circleId } });
-  const { data: members, isLoading: loadingMembers } = useListCircleMembers(circleId, { query: { enabled: !!circleId } });
+  const { data: circle,  isLoading: loadingCircle }   = useGetCircle(circleId,        { query: { enabled: !!circleId } });
+  const { data: summary }                              = useGetCircleSummary(circleId,  { query: { enabled: !!circleId } });
+  const { data: members, isLoading: loadingMembers }   = useListCircleMembers(circleId, { query: { enabled: !!circleId } });
   const { data: activity, isLoading: loadingActivity } = useGetCircleActivity(circleId, { query: { enabled: !!circleId } });
-  const { data: places } = useListPlaces(circleId, { query: { enabled: !!circleId } });
+  const { data: places }                               = useListPlaces(circleId,        { query: { enabled: !!circleId } });
+  const { data: messages, isLoading: loadingMessages } = useListCircleMessages(circleId, { query: { enabled: !!circleId, refetchInterval: 4000 } });
 
   const inviteMember = useInviteMember();
   const removeMember = useRemoveCircleMember();
-  const checkIn = useCheckIn();
+  const checkIn      = useCheckIn();
+  const sendMessage  = useSendCircleMessage();
 
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteOpen, setInviteOpen] = useState(false);
-  const [checkInMsg, setCheckInMsg] = useState("");
-  const [checkInOpen, setCheckInOpen] = useState(false);
-  const [linkCopied, setLinkCopied] = useState(false);
-  const [linkLoading, setLinkLoading] = useState(false);
+  const [inviteEmail,  setInviteEmail]  = useState("");
+  const [inviteOpen,   setInviteOpen]   = useState(false);
+  const [checkInMsg,   setCheckInMsg]   = useState("");
+  const [checkInOpen,  setCheckInOpen]  = useState(false);
+  const [linkCopied,   setLinkCopied]   = useState(false);
+  const [linkLoading,  setLinkLoading]  = useState(false);
+  const [chatMessage,  setChatMessage]  = useState("");
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const handleInvite = (e: React.FormEvent) => {
     e.preventDefault();
     inviteMember.mutate({ circleId, data: { email: inviteEmail } }, {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListCircleMembersQueryKey(circleId) });
-        queryClient.invalidateQueries({ queryKey: getGetCircleSummaryQueryKey(circleId) });
+        qc.invalidateQueries({ queryKey: getListCircleMembersQueryKey(circleId) });
+        qc.invalidateQueries({ queryKey: getGetCircleSummaryQueryKey(circleId) });
         setInviteEmail("");
         setInviteOpen(false);
-        toast({ title: "Member invited" });
+        toast({ title: "Invite sent!", description: "Member go receive notification." });
       },
-      onError: () => toast({ title: "Could not invite member", variant: "destructive" }),
+      onError: () => toast({ title: "Invite failed", variant: "destructive" }),
     });
   };
 
   const handleRemove = (memberId: number) => {
     removeMember.mutate({ circleId, memberId }, {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListCircleMembersQueryKey(circleId) });
-        queryClient.invalidateQueries({ queryKey: getGetCircleSummaryQueryKey(circleId) });
-        toast({ title: "Member removed" });
+        qc.invalidateQueries({ queryKey: getListCircleMembersQueryKey(circleId) });
+        qc.invalidateQueries({ queryKey: getGetCircleSummaryQueryKey(circleId) });
       },
     });
-  };
-
-  const handleShareLink = async () => {
-    setLinkLoading(true);
-    try {
-      const res  = await fetch(`/api/circles/${circleId}/invite-link`, {
-        method:      "POST",
-        credentials: "include",
-        headers:     { "Content-Type": "application/json" },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed");
-      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-      const url  = `${window.location.origin}${base}/join/${data.token}`;
-      await navigator.clipboard.writeText(url);
-      setLinkCopied(true);
-      toast({ title: "Invite link copied! 🔗", description: "Share am on WhatsApp or anywhere you want." });
-      setTimeout(() => setLinkCopied(false), 3000);
-    } catch {
-      toast({ title: "Could not generate link", variant: "destructive" });
-    } finally {
-      setLinkLoading(false);
-    }
   };
 
   const handleCheckIn = (e: React.FormEvent) => {
     e.preventDefault();
     checkIn.mutate({ circleId, data: { description: checkInMsg } }, {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getGetCircleActivityQueryKey(circleId) });
+        qc.invalidateQueries({ queryKey: getGetCircleActivityQueryKey(circleId) });
         setCheckInMsg("");
         setCheckInOpen(false);
-        toast({ title: "Checked in!" });
+        toast({ title: "Checked in!", description: "Your people don see say you dey here." });
       },
+      onError: () => toast({ title: "Check-in failed", variant: "destructive" }),
+    });
+  };
+
+  const handleInviteLink = async () => {
+    setLinkLoading(true);
+    try {
+      const res = await fetch(`/api/circles/${circleId}/invite-link`, { method: "POST", credentials: "include" });
+      const data = await res.json();
+      if (res.ok) {
+        const url = `${window.location.origin}/join/${data.token}`;
+        await navigator.clipboard.writeText(url);
+        setLinkCopied(true);
+        setTimeout(() => setLinkCopied(false), 3000);
+      }
+    } finally {
+      setLinkLoading(false);
+    }
+  };
+
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    const content = chatMessage.trim();
+    if (!content) return;
+    sendMessage.mutate({ circleId, data: { content } }, {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getListCircleMessagesQueryKey(circleId) });
+        setChatMessage("");
+      },
+      onError: () => toast({ title: "Message not sent", variant: "destructive" }),
     });
   };
 
   if (loadingCircle) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex h-full items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
 
+  if (!circle) {
+    return (
+      <div className="flex flex-col h-full items-center justify-center gap-4 text-muted-foreground">
+        <Users className="w-12 h-12 opacity-30" />
+        <p>Circle no dey o</p>
+        <Link href="/circles"><Button variant="outline">Go Back</Button></Link>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
+    <div className="p-4 md:p-6 space-y-4 max-w-2xl mx-auto pb-24">
+      {/* Header */}
       <div className="flex items-center gap-3">
         <Link href="/circles">
-          <Button variant="ghost" size="icon" className="shrink-0">
-            <ChevronLeft className="w-5 h-5" />
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+            <ChevronLeft className="w-4 h-4" />
           </Button>
         </Link>
-        <div className="flex items-center gap-3 flex-1">
-          <div className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: circle?.color || "#14b8a6" }} />
-          <div>
-            <h1 className="text-2xl font-bold">{circle?.name}</h1>
-            {circle?.description && <p className="text-sm text-muted-foreground">{circle.description}</p>}
-          </div>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl font-bold truncate">{circle.name}</h1>
+          {circle.description && <p className="text-sm text-muted-foreground truncate">{circle.description}</p>}
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleShareLink}
-          disabled={linkLoading}
-          className={linkCopied ? "text-emerald-600 border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30" : ""}
-        >
-          {linkCopied
-            ? <><Check className="w-4 h-4 mr-2" />Copied!</>
-            : <><Link2 className="w-4 h-4 mr-2" />Share Link</>
-          }
-        </Button>
-        <Dialog open={checkInOpen} onOpenChange={setCheckInOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm">
-              <MessageSquare className="w-4 h-4 mr-2" />
-              Check In
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Post a Check-In</DialogTitle></DialogHeader>
-            <form onSubmit={handleCheckIn} className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <Label>Message</Label>
-                <Input placeholder="At the park, heading home soon..." value={checkInMsg} onChange={e => setCheckInMsg(e.target.value)} autoFocus />
-              </div>
-              <div className="flex justify-end">
-                <Button type="submit" disabled={checkIn.isPending || !checkInMsg.trim()}>
-                  {checkIn.isPending ? "Posting..." : "Post Check-In"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <div className="flex gap-2">
+          <Dialog open={checkInOpen} onOpenChange={setCheckInOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="secondary">
+                <Star className="w-4 h-4 mr-2" />Check in
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Check In</DialogTitle></DialogHeader>
+              <form onSubmit={handleCheckIn} className="space-y-4 pt-2">
+                <Input placeholder="Where you dey? E.g. I dey office" value={checkInMsg} onChange={e => setCheckInMsg(e.target.value)} autoFocus />
+                <div className="flex justify-end">
+                  <Button type="submit" disabled={checkIn.isPending || !checkInMsg.trim()}>
+                    {checkIn.isPending ? "Sending..." : "Check In"}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+          <Button size="sm" variant="outline" onClick={handleInviteLink} disabled={linkLoading}>
+            {linkCopied ? <Check className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
+          </Button>
+        </div>
       </div>
 
       {summary && (
         <div className="grid grid-cols-3 gap-3">
           {[
-            { label: "Members", value: summary.memberCount, icon: <Users className="w-4 h-4 text-primary" /> },
-            { label: "Places", value: summary.placeCount, icon: <MapPin className="w-4 h-4 text-amber-500" /> },
-            { label: "Events Today", value: summary.recentEventCount, icon: <Activity className="w-4 h-4 text-emerald-500" /> },
+            { label: "Members",     value: summary.memberCount,     icon: <Users    className="w-4 h-4 text-primary" /> },
+            { label: "Places",      value: summary.placeCount,      icon: <MapPin   className="w-4 h-4 text-amber-500" /> },
+            { label: "Events Today",value: summary.recentEventCount,icon: <Activity className="w-4 h-4 text-emerald-500" /> },
           ].map(({ label, value, icon }) => (
             <Card key={label}>
               <CardContent className="p-4 flex flex-col items-center gap-1">
@@ -189,11 +205,13 @@ export default function CircleDetail() {
 
       <Tabs defaultValue="members">
         <TabsList className="w-full">
-          <TabsTrigger value="members" className="flex-1">Members</TabsTrigger>
-          <TabsTrigger value="places" className="flex-1">Places</TabsTrigger>
+          <TabsTrigger value="members"  className="flex-1">Members</TabsTrigger>
+          <TabsTrigger value="chat"     className="flex-1">Chat</TabsTrigger>
+          <TabsTrigger value="places"   className="flex-1">Places</TabsTrigger>
           <TabsTrigger value="activity" className="flex-1">Activity</TabsTrigger>
         </TabsList>
 
+        {/* ── Members Tab ─────────────────────────────── */}
         <TabsContent value="members" className="space-y-3 mt-4">
           <div className="flex justify-end">
             <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
@@ -270,6 +288,81 @@ export default function CircleDetail() {
           )}
         </TabsContent>
 
+        {/* ── Chat Tab ────────────────────────────────── */}
+        <TabsContent value="chat" className="mt-4">
+          <div className="flex flex-col h-[460px] border border-border rounded-xl overflow-hidden bg-background">
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-3">
+              {loadingMessages ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : !messages?.length ? (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                  <MessageSquare className="w-10 h-10 mb-3 opacity-30" />
+                  <p className="font-medium text-sm">No messages yet o</p>
+                  <p className="text-xs mt-1 text-center">Be the first to say something to your circle!</p>
+                </div>
+              ) : (
+                messages.map(msg => {
+                  const isOwn = msg.userId === (user as any)?.id;
+                  return (
+                    <div key={msg.id} className={`flex gap-2 ${isOwn ? "flex-row-reverse" : "flex-row"}`}>
+                      {!isOwn && (
+                        <Avatar className="h-7 w-7 shrink-0 self-end mt-4">
+                          <AvatarImage src={msg.user.profileImageUrl || undefined} />
+                          <AvatarFallback className="text-[10px] bg-primary/20 text-primary">
+                            {msg.user.firstName?.[0] || "?"}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                      <div className={`max-w-[72%] flex flex-col gap-0.5 ${isOwn ? "items-end" : "items-start"}`}>
+                        {!isOwn && (
+                          <span className="text-[11px] text-muted-foreground font-medium px-1">
+                            {msg.user.firstName}
+                          </span>
+                        )}
+                        <div className={`px-3 py-2 rounded-2xl text-sm leading-relaxed ${
+                          isOwn
+                            ? "bg-primary text-primary-foreground rounded-tr-sm"
+                            : "bg-secondary text-secondary-foreground rounded-tl-sm"
+                        }`}>
+                          {msg.content}
+                        </div>
+                        <span className="text-[10px] text-muted-foreground px-1">
+                          {formatDistanceToNow(new Date(msg.createdAt))} ago
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input */}
+            <form onSubmit={handleSendMessage} className="border-t border-border p-3 flex gap-2 bg-card">
+              <Input
+                value={chatMessage}
+                onChange={e => setChatMessage(e.target.value)}
+                placeholder="Oya talk something…"
+                maxLength={500}
+                className="flex-1"
+                onKeyDown={e => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage(e as any);
+                  }
+                }}
+              />
+              <Button type="submit" size="icon" disabled={!chatMessage.trim() || sendMessage.isPending}>
+                {sendMessage.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              </Button>
+            </form>
+          </div>
+        </TabsContent>
+
+        {/* ── Places Tab ──────────────────────────────── */}
         <TabsContent value="places" className="mt-4">
           {!places?.length ? (
             <div className="text-center py-12 text-muted-foreground">
@@ -290,7 +383,9 @@ export default function CircleDetail() {
                     </div>
                     <div className="flex-1">
                       <div className="font-semibold">{place.name}</div>
-                      <div className="text-xs text-muted-foreground">{place.latitude.toFixed(4)}, {place.longitude.toFixed(4)} · radius {place.radius}m</div>
+                      <div className="text-xs text-muted-foreground">
+                        {place.latitude.toFixed(4)}, {place.longitude.toFixed(4)} · radius {place.radius}m
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -299,6 +394,7 @@ export default function CircleDetail() {
           )}
         </TabsContent>
 
+        {/* ── Activity Tab ────────────────────────────── */}
         <TabsContent value="activity" className="mt-4">
           {loadingActivity ? (
             <div className="space-y-3">

@@ -1,1 +1,3 @@
 - [Drizzle inArray pg bug](drizzle-inarray-pg-bug.md) — inArray() and sql`= ANY(${jsArray})` generate broken SQL with pg driver; use or(...ids.map(id => eq(col, id))) instead.
+- [Tailwind v4 dark mode](tailwind-dark-mode.md) — no tailwind.config.ts; dark mode is @custom-variant dark (&:is(.dark *)) in index.css; toggle .dark on document.documentElement.
+- [OpenAPI Orval gotcha](openapi-gotcha.md) — do NOT add limit/offset query params to ops that also have path params — causes Orval hook name collisions.

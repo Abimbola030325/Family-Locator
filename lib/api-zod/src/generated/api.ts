@@ -443,3 +443,43 @@ export const CheckInBody = zod.object({
 })
 
 
+/**
+ * @summary Get messages for a circle
+ */
+export const ListCircleMessagesParams = zod.object({
+  "circleId": zod.coerce.number()
+})
+
+export const ListCircleMessagesResponseItem = zod.object({
+  "id": zod.number(),
+  "circleId": zod.number(),
+  "userId": zod.string(),
+  "content": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "user": zod.object({
+  "id": zod.string(),
+  "email": zod.string().email().nullable(),
+  "firstName": zod.string().nullable(),
+  "lastName": zod.string().nullable(),
+  "profileImageUrl": zod.string().nullable()
+})
+})
+export const ListCircleMessagesResponse = zod.array(ListCircleMessagesResponseItem)
+
+
+/**
+ * @summary Send a message to a circle
+ */
+export const SendCircleMessageParams = zod.object({
+  "circleId": zod.coerce.number()
+})
+
+export const sendCircleMessageBodyContentMax = 500;
+
+
+
+export const SendCircleMessageBody = zod.object({
+  "content": zod.string().min(1).max(sendCircleMessageBodyContentMax)
+})
+
+

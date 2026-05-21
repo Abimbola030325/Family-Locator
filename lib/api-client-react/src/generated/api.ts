@@ -26,6 +26,7 @@ import type {
   CheckInInput,
   Circle,
   CircleInput,
+  CircleMessage,
   CircleSummary,
   CircleUpdate,
   ErrorEnvelope,
@@ -37,6 +38,7 @@ import type {
   LogoutSuccess,
   Member,
   MemberLocation,
+  MessageInput,
   MobileTokenExchangeRequest,
   MobileTokenExchangeSuccess,
   Place,
@@ -1928,5 +1930,154 @@ export const useCheckIn = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCheckInMutationOptions(options));
+    }
+
+export const getListCircleMessagesUrl = (circleId: number,) => {
+
+
+
+
+  return `/api/circles/${circleId}/messages`
+}
+
+/**
+ * @summary Get messages for a circle
+ */
+export const listCircleMessages = async (circleId: number, options?: RequestInit): Promise<CircleMessage[]> => {
+
+  return customFetch<CircleMessage[]>(getListCircleMessagesUrl(circleId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListCircleMessagesQueryKey = (circleId: number,) => {
+    return [
+    `/api/circles/${circleId}/messages`
+    ] as const;
+    }
+
+
+export const getListCircleMessagesQueryOptions = <TData = Awaited<ReturnType<typeof listCircleMessages>>, TError = ErrorType<unknown>>(circleId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCircleMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListCircleMessagesQueryKey(circleId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCircleMessages>>> = ({ signal }) => listCircleMessages(circleId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(circleId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listCircleMessages>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListCircleMessagesQueryResult = NonNullable<Awaited<ReturnType<typeof listCircleMessages>>>
+export type ListCircleMessagesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get messages for a circle
+ */
+
+export function useListCircleMessages<TData = Awaited<ReturnType<typeof listCircleMessages>>, TError = ErrorType<unknown>>(
+ circleId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCircleMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListCircleMessagesQueryOptions(circleId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getSendCircleMessageUrl = (circleId: number,) => {
+
+
+
+
+  return `/api/circles/${circleId}/messages`
+}
+
+/**
+ * @summary Send a message to a circle
+ */
+export const sendCircleMessage = async (circleId: number,
+    messageInput: MessageInput, options?: RequestInit): Promise<CircleMessage> => {
+
+  return customFetch<CircleMessage>(getSendCircleMessageUrl(circleId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      messageInput,)
+  }
+);}
+
+
+
+
+export const getSendCircleMessageMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendCircleMessage>>, TError,{circleId: number;data: BodyType<MessageInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof sendCircleMessage>>, TError,{circleId: number;data: BodyType<MessageInput>}, TContext> => {
+
+const mutationKey = ['sendCircleMessage'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendCircleMessage>>, {circleId: number;data: BodyType<MessageInput>}> = (props) => {
+          const {circleId,data} = props ?? {};
+
+          return  sendCircleMessage(circleId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SendCircleMessageMutationResult = NonNullable<Awaited<ReturnType<typeof sendCircleMessage>>>
+    export type SendCircleMessageMutationBody = BodyType<MessageInput>
+    export type SendCircleMessageMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Send a message to a circle
+ */
+export const useSendCircleMessage = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendCircleMessage>>, TError,{circleId: number;data: BodyType<MessageInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof sendCircleMessage>>,
+        TError,
+        {circleId: number;data: BodyType<MessageInput>},
+        TContext
+      > => {
+      return useMutation(getSendCircleMessageMutationOptions(options));
     }
 

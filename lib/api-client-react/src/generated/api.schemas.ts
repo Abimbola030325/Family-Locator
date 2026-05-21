@@ -198,6 +198,23 @@ export interface CheckInInput {
   placeId?: number;
 }
 
+export interface CircleMessage {
+  id: number;
+  circleId: number;
+  userId: string;
+  content: string;
+  createdAt: string;
+  user: AuthUser;
+}
+
+export interface MessageInput {
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  content: string;
+}
+
 /**
  * Opaque session token — `Bearer <sid>`.
  */
