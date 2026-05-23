@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Users, Activity, Star, Battery, UserPlus, Trash2, ChevronLeft, Clock, MessageSquare, Link2, Check, Send, Loader2 } from "lucide-react";
+import { MapPin, Users, Activity, Star, Battery, UserPlus, Trash2, ChevronLeft, Clock, MessageSquare, Link2, Check, Send, Loader2, Share2, Copy } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
@@ -55,7 +55,9 @@ export default function CircleDetail() {
   const [checkInOpen,  setCheckInOpen]  = useState(false);
   const [linkCopied,   setLinkCopied]   = useState(false);
   const [linkLoading,  setLinkLoading]  = useState(false);
+  const [inviteLink,   setInviteLink]   = useState("");
   const [chatMessage,  setChatMessage]  = useState("");
+  const linkInputRef = useRef<HTMLInputElement>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -113,21 +115,55 @@ export default function CircleDetail() {
     });
   };
 
-  const handleInviteLink = async () => {
+  const handleGenerateLink = async () => {
     setLinkLoading(true);
     try {
       const res = await fetch(`/api/circles/${circleId}/invite-link`, { method: "POST", credentials: "include" });
       const data = await res.json();
       if (res.ok) {
         const url = `${window.location.origin}/join/${data.token}`;
-        await navigator.clipboard.writeText(url);
-        setLinkCopied(true);
-        setTimeout(() => setLinkCopied(false), 3000);
+        setInviteLink(url);
+      } else {
+        toast({ title: "Could not generate link", variant: "destructive" });
       }
     } finally {
       setLinkLoading(false);
     }
   };
+
+  const handleCopyLink = async () => {
+    if (!inviteLink) return;
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 3000);
+    } catch {
+      // Clipboard permission denied — select text so user can copy manually
+      linkInputRef.current?.select();
+      toast({ title: "Select the link above and copy it manually", variant: "destructive" });
+    }
+  };
+
+  const handleShareLink = async () => {
+    if (!inviteLink) return;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Join my circle on Where You Dey?`,
+          text: `Join my family circle on Where You Dey? — tap the link to sign in and join automatically.`,
+          url: inviteLink,
+        });
+      } catch {
+        // User cancelled share — do nothing
+      }
+    } else {
+      // Fallback: open WhatsApp with pre-filled message
+      const text = encodeURIComponent(`Join my family circle on Where You Dey? 🇳🇬\n${inviteLink}`);
+      window.open(`https://wa.me/?text=${text}`, "_blank", "noopener,noreferrer");
+    }
+  };
+
+  const handleInviteLink = handleGenerateLink;
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -227,7 +263,14 @@ export default function CircleDetail() {
         {/* ── Members Tab ─────────────────────────────── */}
         <TabsContent value="members" className="space-y-3 mt-4">
           <div className="flex justify-end">
-            <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+            <Dialog
+              open={inviteOpen}
+              onOpenChange={(open) => {
+                setInviteOpen(open);
+                if (!open) { setInviteLink(""); setLinkCopied(false); setInviteEmail(""); }
+                if (open) handleGenerateLink();
+              }}
+            >
               <DialogTrigger asChild>
                 <Button size="sm">
                   <UserPlus className="w-4 h-4 mr-2" />
@@ -240,23 +283,67 @@ export default function CircleDetail() {
                 </DialogHeader>
                 <div className="space-y-5 pt-2">
                   {/* Primary: Invite Link */}
-                  <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-2">
+                  <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-3">
                     <p className="text-sm font-semibold text-foreground flex items-center gap-2">
                       <Link2 className="w-4 h-4 text-primary" />
                       Share Invite Link
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Send this link via WhatsApp, SMS, or any app. Once they sign in, they join your circle automatically.
+                      Send via WhatsApp, SMS, or any app. Once they sign in, they join your circle automatically.
                     </p>
-                    <Button
-                      type="button"
-                      className="w-full"
-                      disabled={linkLoading}
-                      onClick={() => { setInviteOpen(false); handleInviteLink(); }}
-                    >
-                      {linkLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Link2 className="w-4 h-4 mr-2" />}
-                      {linkCopied ? "Link Copied!" : "Copy Invite Link"}
-                    </Button>
+
+                    {/* Link display */}
+                    {linkLoading ? (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="w-4 h-4 animate-spin" /> Generating link...
+                      </div>
+                    ) : inviteLink ? (
+                      <>
+                        <div className="flex gap-2">
+                          <Input
+                            ref={linkInputRef}
+                            readOnly
+                            value={inviteLink}
+                            className="text-xs font-mono bg-background"
+                            onFocus={e => e.target.select()}
+                          />
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="outline"
+                            onClick={handleCopyLink}
+                            title="Copy link"
+                          >
+                            {linkCopied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                          </Button>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            className="flex-1"
+                            onClick={handleCopyLink}
+                            variant={linkCopied ? "outline" : "default"}
+                          >
+                            {linkCopied
+                              ? <><Check className="w-4 h-4 mr-2 text-emerald-500" />Copied!</>
+                              : <><Copy className="w-4 h-4 mr-2" />Copy Link</>}
+                          </Button>
+                          <Button
+                            type="button"
+                            className="flex-1"
+                            variant="secondary"
+                            onClick={handleShareLink}
+                          >
+                            <Share2 className="w-4 h-4 mr-2" />
+                            {typeof navigator !== "undefined" && "share" in navigator ? "Share" : "Send via WhatsApp"}
+                          </Button>
+                        </div>
+                      </>
+                    ) : (
+                      <Button type="button" className="w-full" onClick={handleGenerateLink}>
+                        <Link2 className="w-4 h-4 mr-2" /> Generate Invite Link
+                      </Button>
+                    )}
                   </div>
 
                   {/* Divider */}
