@@ -12,3 +12,9 @@ id = "Y2om45eNaLS2SisF5UMRF"
 uri = "file://where-you-dey.tar.gz"
 type = "unspecified"
 title = "Where You Dey — Full Source Code"
+
+[[outputs]]
+id = "Bpg_bLPBAflw9myAwAX9l"
+uri = "file://PRODUCTION_ARCHITECTURE.md"
+type = "text"
+title = "Production Architecture — Where You Dey?"
