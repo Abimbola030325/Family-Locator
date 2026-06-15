@@ -6,11 +6,14 @@ import {
   ExchangeMobileAuthorizationCodeResponse,
   LogoutMobileSessionResponse,
 } from "@workspace/api-zod";
+import { eq } from "drizzle-orm";
 import { db, usersTable } from "@workspace/db";
 import {
   clearSession,
   getOidcConfig,
   getSessionId,
+  getSession,
+  updateSession,
   createSession,
   deleteSession,
   SESSION_COOKIE,
@@ -88,6 +91,28 @@ router.get("/auth/user", (req: Request, res: Response) => {
       user: req.isAuthenticated() ? req.user : null,
     }),
   );
+});
+
+router.patch("/users/me", async (req: Request, res: Response) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { phone } = req.body as { phone?: string };
+  if (typeof phone !== "string") { res.status(400).json({ error: "phone required" }); return; }
+  const cleaned = phone.trim();
+  const [updated] = await db.update(usersTable)
+    .set({ phone: cleaned || null, updatedAt: new Date() })
+    .where(eq(usersTable.id, req.user.id))
+    .returning();
+
+  // Also update the live session so phone is available immediately
+  const sid = getSessionId(req);
+  if (sid) {
+    const session = await getSession(sid);
+    if (session) {
+      await updateSession(sid, { ...session, user: { ...session.user, phone: updated.phone ?? null } });
+    }
+  }
+
+  res.json({ ok: true, phone: updated.phone });
 });
 
 router.get("/login", async (req: Request, res: Response) => {
@@ -176,6 +201,7 @@ router.get("/callback", async (req: Request, res: Response) => {
       firstName: dbUser.firstName,
       lastName: dbUser.lastName,
       profileImageUrl: dbUser.profileImageUrl,
+      phone: dbUser.phone ?? null,
     },
     access_token: tokens.access_token,
     refresh_token: tokens.refresh_token,

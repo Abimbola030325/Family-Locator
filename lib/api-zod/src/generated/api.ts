@@ -29,7 +29,8 @@ export const GetCurrentAuthUserResponse = zod.object({
   "email": zod.string().email().nullable(),
   "firstName": zod.string().nullable(),
   "lastName": zod.string().nullable(),
-  "profileImageUrl": zod.string().nullable()
+  "profileImageUrl": zod.string().nullable(),
+  "phone": zod.string().nullish()
 }),zod.null()])
 })
 
@@ -210,7 +211,8 @@ export const ListCircleMembersResponseItem = zod.object({
   "email": zod.string().email().nullable(),
   "firstName": zod.string().nullable(),
   "lastName": zod.string().nullable(),
-  "profileImageUrl": zod.string().nullable()
+  "profileImageUrl": zod.string().nullable(),
+  "phone": zod.string().nullish()
 }),
   "lastLocation": zod.union([zod.object({
   "id": zod.number(),
@@ -304,7 +306,8 @@ export const GetCircleMemberLocationsResponseItem = zod.object({
   "email": zod.string().email().nullable(),
   "firstName": zod.string().nullable(),
   "lastName": zod.string().nullable(),
-  "profileImageUrl": zod.string().nullable()
+  "profileImageUrl": zod.string().nullable(),
+  "phone": zod.string().nullish()
 }),
   "location": zod.union([zod.object({
   "id": zod.number(),
@@ -421,7 +424,8 @@ export const GetCircleActivityResponseItem = zod.object({
   "email": zod.string().email().nullable(),
   "firstName": zod.string().nullable(),
   "lastName": zod.string().nullable(),
-  "profileImageUrl": zod.string().nullable()
+  "profileImageUrl": zod.string().nullable(),
+  "phone": zod.string().nullish()
 })
 })
 export const GetCircleActivityResponse = zod.array(GetCircleActivityResponseItem)
@@ -461,7 +465,8 @@ export const ListCircleMessagesResponseItem = zod.object({
   "email": zod.string().email().nullable(),
   "firstName": zod.string().nullable(),
   "lastName": zod.string().nullable(),
-  "profileImageUrl": zod.string().nullable()
+  "profileImageUrl": zod.string().nullable(),
+  "phone": zod.string().nullish()
 })
 })
 export const ListCircleMessagesResponse = zod.array(ListCircleMessagesResponseItem)

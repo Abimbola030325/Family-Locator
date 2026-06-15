@@ -9,7 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { MapPin, Clock, Battery, LogOut, Navigation, History, Bell, BellOff, Radio } from "lucide-react";
+import { MapPin, Clock, Battery, LogOut, Navigation, History, Bell, BellOff, Radio, Phone, Check } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { formatDistanceToNow, format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { subscribeToPush, unsubscribeFromPush, currentSubscription } from "@/lib/push";
@@ -24,6 +25,38 @@ export default function Profile() {
 
   // Auto-track context
   const { autoTrackEnabled, setAutoTrackEnabled, isTracking, lastUpdate, error: trackError } = useAutoTrackContext();
+
+  // Phone number for SMS SOS
+  const [phone,        setPhone]        = useState(user?.phone ?? "");
+  const [phoneSaving,  setPhoneSaving]  = useState(false);
+  const [phoneSaved,   setPhoneSaved]   = useState(false);
+
+  // Sync phone from user when it loads
+  useEffect(() => {
+    if (user?.phone) setPhone(user.phone);
+  }, [user?.phone]);
+
+  const handleSavePhone = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPhoneSaving(true);
+    try {
+      const res = await fetch("/api/users/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ phone }),
+      });
+      if (res.ok) {
+        setPhoneSaved(true);
+        setTimeout(() => setPhoneSaved(false), 3000);
+        toast({ title: "Phone number saved!", description: "You go receive SOS alerts by SMS." });
+      } else {
+        toast({ title: "Could not save phone", variant: "destructive" });
+      }
+    } finally {
+      setPhoneSaving(false);
+    }
+  };
 
   // Push notifications
   const [notifEnabled,   setNotifEnabled]   = useState(false);
@@ -116,6 +149,38 @@ export default function Profile() {
               )}
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Phone Number for SMS SOS */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Phone className="w-4 h-4 text-primary" />
+            SOS Phone Number
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-3">
+            Add your phone number so your people fit reach you by SMS when you send SOS — and so you go receive their SOS by SMS too.
+          </p>
+          <form onSubmit={handleSavePhone} className="flex gap-2">
+            <Input
+              type="tel"
+              placeholder="+2348012345678"
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+              className="flex-1"
+            />
+            <Button type="submit" disabled={phoneSaving} size="sm" variant={phoneSaved ? "outline" : "default"}>
+              {phoneSaved
+                ? <><Check className="w-4 h-4 mr-1 text-emerald-500" />Saved</>
+                : phoneSaving ? "Saving..." : "Save"}
+            </Button>
+          </form>
+          <p className="text-[11px] text-muted-foreground mt-2">
+            Use international format: +234 for Nigeria, +44 for UK, etc.
+          </p>
         </CardContent>
       </Card>
 
