@@ -37,10 +37,16 @@ function SosAlertBanner() {
           ? `${alert.latitude.toFixed(4)}°N, ${alert.longitude!.toFixed(4)}°E`
           : null;
 
+        const mapsUrl = alert.latitude != null
+          ? `https://www.google.com/maps/dir/?api=1&destination=${alert.latitude},${alert.longitude}`
+          : alert.address
+            ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(alert.address)}`
+            : null;
+
         return (
           <div
             key={alert.id}
-            className="flex items-start gap-3 bg-rose-600 text-white px-4 py-3 shadow-lg animate-pulse-once"
+            className="flex items-start gap-3 bg-rose-600 text-white px-4 py-3 shadow-lg"
           >
             <span className="relative flex h-5 w-5 shrink-0 mt-0.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-50" />
@@ -50,20 +56,32 @@ function SosAlertBanner() {
               <p className="font-bold text-sm leading-tight">
                 🆘 {name} needs help o!
               </p>
-              <p className="text-xs opacity-90 mt-0.5">
+              <p className="text-xs opacity-90 mt-0.5 truncate">
                 {alert.message}
                 {(alert.address || locationText) && (
                   <span className="inline-flex items-center gap-1 ml-2">
-                    <MapPinIcon className="h-3 w-3" />
-                    {alert.address ?? locationText}
+                    <MapPinIcon className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{alert.address ?? locationText}</span>
                   </span>
                 )}
                 {" · "}{formatDistanceToNow(new Date(alert.sentAt))} ago
               </p>
+              {mapsUrl && (
+                <a
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 mt-1.5 text-xs font-semibold bg-white/20 hover:bg-white/30 rounded px-2 py-0.5 transition-colors"
+                  onClick={e => e.stopPropagation()}
+                >
+                  <MapPinIcon className="h-3 w-3" />
+                  Get Directions on Google Maps
+                </a>
+              )}
             </div>
             <button
               onClick={() => setDismissed(prev => new Set([...prev, alert.id]))}
-              className="shrink-0 opacity-80 hover:opacity-100 p-0.5"
+              className="shrink-0 opacity-80 hover:opacity-100 p-0.5 mt-0.5"
               aria-label="Dismiss"
             >
               <X className="h-4 w-4" />

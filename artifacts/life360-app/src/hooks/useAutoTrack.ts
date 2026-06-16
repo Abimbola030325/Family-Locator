@@ -14,6 +14,20 @@ function haversine(lat1: number, lng1: number, lat2: number, lng2: number): numb
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18`,
+      { headers: { "Accept-Language": "en", "User-Agent": "WhereYouDey/1.0" } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json() as { display_name?: string };
+    return data.display_name ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export interface AutoTrackState {
   isTracking:  boolean;
   lastUpdate:  Date | null;
@@ -37,7 +51,7 @@ export function useAutoTrack(enabled: boolean): AutoTrackState {
   const [isWatching, setIsWatching] = useState(false);
 
   const postLocation = useCallback(
-    (lat: number, lng: number, accuracy: number, speed: number | null) => {
+    async (lat: number, lng: number, accuracy: number, speed: number | null) => {
       const now  = Date.now();
       const prev = lastPostedRef.current;
 
@@ -51,6 +65,8 @@ export function useAutoTrack(enabled: boolean): AutoTrackState {
       setLastUpdate(new Date());
       setError(null);
 
+      const address = await reverseGeocode(lat, lng);
+
       updateLocation.mutate(
         {
           data: {
@@ -59,6 +75,7 @@ export function useAutoTrack(enabled: boolean): AutoTrackState {
             accuracy,
             speed:        speed ?? undefined,
             batteryLevel: batteryRef.current ?? undefined,
+            address:      address ?? undefined,
           },
         },
         { onError: () => setError("Failed to share location") }
