@@ -161,11 +161,24 @@ router.get("/sos/active", async (req, res): Promise<void> => {
     ))
     .orderBy(desc(sosAlertsTable.sentAt));
 
+  // Fetch the latest location address for each unique user
+  const uniqueAlertUserIds = [...new Set(alerts.map(a => a.userId))];
+  const latestAddresses: Record<string, string | null> = {};
+  await Promise.all(uniqueAlertUserIds.map(async uid => {
+    const [loc] = await db.select({ address: locationsTable.address })
+      .from(locationsTable)
+      .where(eq(locationsTable.userId, uid))
+      .orderBy(desc(locationsTable.timestamp))
+      .limit(1);
+    latestAddresses[uid] = loc?.address ?? null;
+  }));
+
   const result = alerts.map(a => ({
     id:        a.id,
     userId:    a.userId,
     latitude:  a.latitude ?? null,
     longitude: a.longitude ?? null,
+    address:   latestAddresses[a.userId] ?? null,
     message:   a.message,
     sentAt:    a.sentAt.toISOString(),
     user: {

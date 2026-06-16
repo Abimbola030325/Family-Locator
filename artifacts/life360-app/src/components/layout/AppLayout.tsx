@@ -52,10 +52,10 @@ function SosAlertBanner() {
               </p>
               <p className="text-xs opacity-90 mt-0.5">
                 {alert.message}
-                {locationText && (
+                {(alert.address || locationText) && (
                   <span className="inline-flex items-center gap-1 ml-2">
                     <MapPinIcon className="h-3 w-3" />
-                    {locationText}
+                    {alert.address ?? locationText}
                   </span>
                 )}
                 {" · "}{formatDistanceToNow(new Date(alert.sentAt))} ago

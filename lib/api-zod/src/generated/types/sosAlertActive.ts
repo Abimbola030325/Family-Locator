@@ -14,6 +14,8 @@ export interface SosAlertActive {
   latitude?: number | null;
   /** @nullable */
   longitude?: number | null;
+  /** @nullable */
+  address?: string | null;
   message?: string;
   sentAt: Date;
   user: AuthUser;

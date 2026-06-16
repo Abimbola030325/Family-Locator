@@ -910,6 +910,8 @@ components:
           type: [number, 'null']
         longitude:
           type: [number, 'null']
+        address:
+          type: [string, 'null']
         message:
           type: string
         sentAt:

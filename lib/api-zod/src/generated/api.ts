@@ -455,6 +455,7 @@ export const GetActiveSosAlertsResponseItem = zod.object({
   "userId": zod.string(),
   "latitude": zod.number().nullish(),
   "longitude": zod.number().nullish(),
+  "address": zod.string().nullish(),
   "message": zod.string().optional(),
   "sentAt": zod.coerce.date(),
   "user": zod.object({
