@@ -21,6 +21,8 @@ tags:
     description: Saved places management
   - name: activity
     description: Activity feed
+  - name: sos
+    description: SOS emergency alerts
 
 paths:
   /healthz:
@@ -544,6 +546,21 @@ paths:
               schema:
                 $ref: "#/components/schemas/ActivityEvent"
 
+  /sos/active:
+    get:
+      operationId: getActiveSosAlerts
+      tags: [sos]
+      summary: Get recent SOS alerts from circle members (last 30 min)
+      responses:
+        "200":
+          description: Active SOS alerts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SosAlertActive"
+
   /circles/{circleId}/messages:
     get:
       operationId: listCircleMessages
@@ -879,6 +896,27 @@ components:
           type: number
         icon:
           type: string
+
+    # ── SOS ───────────────────────────────────────────────────────────────────
+    SosAlertActive:
+      type: object
+      required: [id, userId, sentAt, user]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        latitude:
+          type: [number, 'null']
+        longitude:
+          type: [number, 'null']
+        message:
+          type: string
+        sentAt:
+          type: string
+          format: date-time
+        user:
+          $ref: "#/components/schemas/AuthUser"
 
     # ── Activity ──────────────────────────────────────────────────────────────
     ActivityEvent:

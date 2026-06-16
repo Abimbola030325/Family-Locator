@@ -34,3 +34,4 @@ export * from './mobileTokenExchangeSuccess';
 export * from './place';
 export * from './placeInput';
 export * from './placeUpdate';
+export * from './sosAlertActive';

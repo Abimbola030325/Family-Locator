@@ -168,6 +168,18 @@ export interface PlaceUpdate {
   icon?: string;
 }
 
+export interface SosAlertActive {
+  id: number;
+  userId: string;
+  /** @nullable */
+  latitude?: number | null;
+  /** @nullable */
+  longitude?: number | null;
+  message?: string;
+  sentAt: string;
+  user: AuthUser;
+}
+
 export type ActivityEventType = typeof ActivityEventType[keyof typeof ActivityEventType];
 
 

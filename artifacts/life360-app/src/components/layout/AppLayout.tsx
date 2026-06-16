@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useAuth } from "@workspace/replit-auth-web";
 import { Link, useLocation } from "wouter";
-import { Map, Users, MapPin, Activity, User, LogOut, AlertTriangle, Loader2, Sun, Moon } from "lucide-react";
+import { Map, Users, MapPin, Activity, User, LogOut, AlertTriangle, Loader2, Sun, Moon, X, MapPin as MapPinIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -13,9 +13,67 @@ import { useAutoTrackContext } from "@/context/AutoTrackContext";
 import { useTheme } from "@/hooks/useTheme";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
+import { useGetActiveSosAlerts, type SosAlertActive } from "@workspace/api-client-react";
 
 const SOS_COOLDOWN_KEY = "wyd_sos_last";
 const SOS_COOLDOWN_MS  = 5 * 60 * 1000;
+
+function SosAlertBanner() {
+  const [dismissed, setDismissed] = useState<Set<number>>(new Set());
+
+  const { data: alerts } = useGetActiveSosAlerts({
+    query: { refetchInterval: 15_000 },
+  });
+
+  const visible = (alerts ?? []).filter(a => !dismissed.has(a.id));
+
+  if (!visible.length) return null;
+
+  return (
+    <div className="flex flex-col gap-1 z-50 w-full">
+      {visible.map((alert: SosAlertActive) => {
+        const name = [alert.user.firstName, alert.user.lastName].filter(Boolean).join(" ") || "Someone";
+        const locationText = alert.latitude != null
+          ? `${alert.latitude.toFixed(4)}°N, ${alert.longitude!.toFixed(4)}°E`
+          : null;
+
+        return (
+          <div
+            key={alert.id}
+            className="flex items-start gap-3 bg-rose-600 text-white px-4 py-3 shadow-lg animate-pulse-once"
+          >
+            <span className="relative flex h-5 w-5 shrink-0 mt-0.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-50" />
+              <AlertTriangle className="relative h-5 w-5" />
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-sm leading-tight">
+                🆘 {name} needs help o!
+              </p>
+              <p className="text-xs opacity-90 mt-0.5">
+                {alert.message}
+                {locationText && (
+                  <span className="inline-flex items-center gap-1 ml-2">
+                    <MapPinIcon className="h-3 w-3" />
+                    {locationText}
+                  </span>
+                )}
+                {" · "}{formatDistanceToNow(new Date(alert.sentAt))} ago
+              </p>
+            </div>
+            <button
+              onClick={() => setDismissed(prev => new Set([...prev, alert.id]))}
+              className="shrink-0 opacity-80 hover:opacity-100 p-0.5"
+              aria-label="Dismiss"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 const navItems = [
   { href: "/",         label: "Map",      icon: Map },
@@ -210,6 +268,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
         </div>
+
+        {/* SOS alert banner — shown whenever a circle member sends SOS */}
+        <SosAlertBanner />
 
         <div className="flex-1 overflow-auto bg-background">
           {children}

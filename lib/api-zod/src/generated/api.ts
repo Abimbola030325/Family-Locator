@@ -448,6 +448,28 @@ export const CheckInBody = zod.object({
 
 
 /**
+ * @summary Get recent SOS alerts from circle members (last 30 min)
+ */
+export const GetActiveSosAlertsResponseItem = zod.object({
+  "id": zod.number(),
+  "userId": zod.string(),
+  "latitude": zod.number().nullish(),
+  "longitude": zod.number().nullish(),
+  "message": zod.string().optional(),
+  "sentAt": zod.coerce.date(),
+  "user": zod.object({
+  "id": zod.string(),
+  "email": zod.string().email().nullable(),
+  "firstName": zod.string().nullable(),
+  "lastName": zod.string().nullable(),
+  "profileImageUrl": zod.string().nullable(),
+  "phone": zod.string().nullish()
+})
+})
+export const GetActiveSosAlertsResponse = zod.array(GetActiveSosAlertsResponseItem)
+
+
+/**
  * @summary Get messages for a circle
  */
 export const ListCircleMessagesParams = zod.object({

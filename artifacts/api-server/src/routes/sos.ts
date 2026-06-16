@@ -1,8 +1,8 @@
 import { Router, type IRouter } from "express";
-import { eq, or, desc, and, ne } from "drizzle-orm";
+import { eq, or, desc, and, ne, gte } from "drizzle-orm";
 import {
   db, sosAlertsTable, circleMembersTable, locationsTable,
-  pushSubscriptionsTable, activityEventsTable,
+  pushSubscriptionsTable, activityEventsTable, usersTable,
 } from "@workspace/db";
 import { sendPushNotification } from "../lib/webpush";
 import { logger } from "../lib/logger";
@@ -104,6 +104,80 @@ router.post("/sos", async (req, res): Promise<void> => {
   }
 
   res.json({ ok: true, notified });
+});
+
+router.get("/sos/active", async (req, res): Promise<void> => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const userId = req.user.id;
+
+  // Find all circles the current user is in
+  const myMemberships = await db.select({ circleId: circleMembersTable.circleId })
+    .from(circleMembersTable)
+    .where(eq(circleMembersTable.userId, userId));
+
+  if (!myMemberships.length) {
+    res.json([]);
+    return;
+  }
+
+  const circleIds = myMemberships.map(m => m.circleId);
+
+  // Get other members in those circles (excluding self)
+  const otherMembers = await db.select({ userId: circleMembersTable.userId })
+    .from(circleMembersTable)
+    .where(and(
+      or(...circleIds.map(id => eq(circleMembersTable.circleId, id))),
+      ne(circleMembersTable.userId, userId)
+    ));
+
+  if (!otherMembers.length) {
+    res.json([]);
+    return;
+  }
+
+  const uniqueUserIds = [...new Set(otherMembers.map(m => m.userId))];
+
+  // Look up SOS alerts from those members in the last 30 minutes
+  const since = new Date(Date.now() - 30 * 60 * 1000);
+
+  const alerts = await db.select({
+    id:        sosAlertsTable.id,
+    userId:    sosAlertsTable.userId,
+    latitude:  sosAlertsTable.latitude,
+    longitude: sosAlertsTable.longitude,
+    message:   sosAlertsTable.message,
+    sentAt:    sosAlertsTable.sentAt,
+    firstName: usersTable.firstName,
+    lastName:  usersTable.lastName,
+    profileImageUrl: usersTable.profileImageUrl,
+    email:     usersTable.email,
+  })
+    .from(sosAlertsTable)
+    .innerJoin(usersTable, eq(sosAlertsTable.userId, usersTable.id))
+    .where(and(
+      or(...uniqueUserIds.map(id => eq(sosAlertsTable.userId, id))),
+      gte(sosAlertsTable.sentAt, since)
+    ))
+    .orderBy(desc(sosAlertsTable.sentAt));
+
+  const result = alerts.map(a => ({
+    id:        a.id,
+    userId:    a.userId,
+    latitude:  a.latitude ?? null,
+    longitude: a.longitude ?? null,
+    message:   a.message,
+    sentAt:    a.sentAt.toISOString(),
+    user: {
+      id:              a.userId,
+      firstName:       a.firstName ?? null,
+      lastName:        a.lastName ?? null,
+      profileImageUrl: a.profileImageUrl ?? null,
+      email:           a.email ?? null,
+    },
+  }));
+
+  res.json(result);
 });
 
 export default router;

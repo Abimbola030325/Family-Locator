@@ -43,7 +43,8 @@ import type {
   MobileTokenExchangeSuccess,
   Place,
   PlaceInput,
-  PlaceUpdate
+  PlaceUpdate,
+  SosAlertActive
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -1931,6 +1932,83 @@ export const useCheckIn = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getCheckInMutationOptions(options));
     }
+
+export const getGetActiveSosAlertsUrl = () => {
+
+
+
+
+  return `/api/sos/active`
+}
+
+/**
+ * @summary Get recent SOS alerts from circle members (last 30 min)
+ */
+export const getActiveSosAlerts = async ( options?: RequestInit): Promise<SosAlertActive[]> => {
+
+  return customFetch<SosAlertActive[]>(getGetActiveSosAlertsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetActiveSosAlertsQueryKey = () => {
+    return [
+    `/api/sos/active`
+    ] as const;
+    }
+
+
+export const getGetActiveSosAlertsQueryOptions = <TData = Awaited<ReturnType<typeof getActiveSosAlerts>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getActiveSosAlerts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetActiveSosAlertsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getActiveSosAlerts>>> = ({ signal }) => getActiveSosAlerts({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getActiveSosAlerts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetActiveSosAlertsQueryResult = NonNullable<Awaited<ReturnType<typeof getActiveSosAlerts>>>
+export type GetActiveSosAlertsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get recent SOS alerts from circle members (last 30 min)
+ */
+
+export function useGetActiveSosAlerts<TData = Awaited<ReturnType<typeof getActiveSosAlerts>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getActiveSosAlerts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetActiveSosAlertsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListCircleMessagesUrl = (circleId: number,) => {
 
