@@ -605,6 +605,60 @@ paths:
               schema:
                 $ref: "#/components/schemas/CircleMessage"
 
+  /circles/{circleId}/members/{memberId}/trail:
+    get:
+      operationId: getMemberTrail
+      tags: [members]
+      summary: Get recent location trail for a circle member (last 10 points)
+      parameters:
+        - name: circleId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Location trail
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LocationRecord"
+
+  /circles/{circleId}/members/{memberId}/ping:
+    post:
+      operationId: pingMember
+      tags: [members]
+      summary: Request a circle member to share their current location
+      parameters:
+        - name: circleId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Ping sent
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok:
+                    type: boolean
+
 components:
   parameters:
     AuthorizationSessionHeader:

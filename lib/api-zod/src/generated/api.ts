@@ -511,3 +511,38 @@ export const SendCircleMessageBody = zod.object({
 })
 
 
+/**
+ * @summary Get recent location trail for a circle member (last 10 points)
+ */
+export const GetMemberTrailParams = zod.object({
+  "circleId": zod.coerce.number(),
+  "memberId": zod.coerce.number()
+})
+
+export const GetMemberTrailResponseItem = zod.object({
+  "id": zod.number(),
+  "userId": zod.string(),
+  "latitude": zod.number(),
+  "longitude": zod.number(),
+  "accuracy": zod.number().nullish(),
+  "address": zod.string().nullish(),
+  "speed": zod.number().nullish(),
+  "batteryLevel": zod.number().nullish(),
+  "timestamp": zod.coerce.date()
+})
+export const GetMemberTrailResponse = zod.array(GetMemberTrailResponseItem)
+
+
+/**
+ * @summary Request a circle member to share their current location
+ */
+export const PingMemberParams = zod.object({
+  "circleId": zod.coerce.number(),
+  "memberId": zod.coerce.number()
+})
+
+export const PingMemberResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+

@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, and, or, count, sql } from "drizzle-orm";
-import { db, circlesTable, circleMembersTable, placesTable, activityEventsTable, usersTable, locationsTable, circleMessagesTable } from "@workspace/db";
+import { db, circlesTable, circleMembersTable, placesTable, activityEventsTable, usersTable, locationsTable, circleMessagesTable, pushSubscriptionsTable } from "@workspace/db";
+import { sendPushNotification } from "../lib/webpush";
 import {
   CreateCircleBody,
   GetCircleParams,
@@ -35,8 +36,8 @@ function parseId(val: unknown): number {
 
 async function getUserById(userId: string) {
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
-  if (!user) return { id: userId, email: null, firstName: null, lastName: null, profileImageUrl: null };
-  return { id: user.id, email: user.email ?? null, firstName: user.firstName ?? null, lastName: user.lastName ?? null, profileImageUrl: user.profileImageUrl ?? null };
+  if (!user) return { id: userId, email: null, firstName: null, lastName: null, profileImageUrl: null, phone: null };
+  return { id: user.id, email: user.email ?? null, firstName: user.firstName ?? null, lastName: user.lastName ?? null, profileImageUrl: user.profileImageUrl ?? null, phone: user.phone ?? null };
 }
 
 // ── Circles ──────────────────────────────────────────────────────────────
@@ -435,6 +436,62 @@ router.post("/circles/:circleId/messages", async (req, res): Promise<void> => {
     id: msg.id, circleId: msg.circleId, userId: msg.userId,
     content: msg.content, createdAt: msg.createdAt.toISOString(), user,
   });
+});
+
+// ── Member Trail ──────────────────────────────────────────────────────────
+
+router.get("/circles/:circleId/members/:memberId/trail", async (req, res): Promise<void> => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const circleId = parseId(req.params.circleId);
+  const memberId = parseId(req.params.memberId);
+  if (isNaN(circleId) || isNaN(memberId)) { res.status(400).json({ error: "Invalid IDs" }); return; }
+
+  const [member] = await db.select().from(circleMembersTable)
+    .where(and(eq(circleMembersTable.id, memberId), eq(circleMembersTable.circleId, circleId)));
+  if (!member) { res.status(404).json({ error: "Member not found" }); return; }
+
+  const trail = await db.select().from(locationsTable)
+    .where(eq(locationsTable.userId, member.userId))
+    .orderBy(sql`timestamp DESC`)
+    .limit(10);
+
+  res.json(trail.map(loc => ({
+    id: loc.id, userId: loc.userId, latitude: loc.latitude, longitude: loc.longitude,
+    accuracy: loc.accuracy ?? null, address: loc.address ?? null,
+    speed: loc.speed ?? null, batteryLevel: loc.batteryLevel ?? null,
+    timestamp: loc.timestamp.toISOString(),
+  })));
+});
+
+// ── Member Ping ───────────────────────────────────────────────────────────
+
+router.post("/circles/:circleId/members/:memberId/ping", async (req, res): Promise<void> => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const circleId = parseId(req.params.circleId);
+  const memberId = parseId(req.params.memberId);
+  if (isNaN(circleId) || isNaN(memberId)) { res.status(400).json({ error: "Invalid IDs" }); return; }
+
+  const [member] = await db.select().from(circleMembersTable)
+    .where(and(eq(circleMembersTable.id, memberId), eq(circleMembersTable.circleId, circleId)));
+  if (!member) { res.status(404).json({ error: "Member not found" }); return; }
+
+  const firstName = req.user.firstName ?? "Someone";
+
+  const subs = await db.select().from(pushSubscriptionsTable)
+    .where(eq(pushSubscriptionsTable.userId, member.userId));
+
+  await Promise.all(subs.map(sub =>
+    sendPushNotification(sub.endpoint, sub.p256dh, sub.auth, {
+      title: "📍 Location requested",
+      body: `${firstName} wants to know where you are. Open the app to share your location.`,
+      icon: "/icon-192.png",
+      tag: `ping-${req.user.id}`,
+    }).catch(() => {})
+  ));
+
+  res.json({ ok: true });
 });
 
 export default router;

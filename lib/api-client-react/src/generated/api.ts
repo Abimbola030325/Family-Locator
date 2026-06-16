@@ -41,6 +41,7 @@ import type {
   MessageInput,
   MobileTokenExchangeRequest,
   MobileTokenExchangeSuccess,
+  PingMember200,
   Place,
   PlaceInput,
   PlaceUpdate,
@@ -2157,5 +2158,159 @@ export const useSendCircleMessage = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getSendCircleMessageMutationOptions(options));
+    }
+
+export const getGetMemberTrailUrl = (circleId: number,
+    memberId: number,) => {
+
+
+
+
+  return `/api/circles/${circleId}/members/${memberId}/trail`
+}
+
+/**
+ * @summary Get recent location trail for a circle member (last 10 points)
+ */
+export const getMemberTrail = async (circleId: number,
+    memberId: number, options?: RequestInit): Promise<LocationRecord[]> => {
+
+  return customFetch<LocationRecord[]>(getGetMemberTrailUrl(circleId,memberId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMemberTrailQueryKey = (circleId: number,
+    memberId: number,) => {
+    return [
+    `/api/circles/${circleId}/members/${memberId}/trail`
+    ] as const;
+    }
+
+
+export const getGetMemberTrailQueryOptions = <TData = Awaited<ReturnType<typeof getMemberTrail>>, TError = ErrorType<unknown>>(circleId: number,
+    memberId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMemberTrail>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMemberTrailQueryKey(circleId,memberId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMemberTrail>>> = ({ signal }) => getMemberTrail(circleId,memberId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(circleId && memberId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMemberTrail>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMemberTrailQueryResult = NonNullable<Awaited<ReturnType<typeof getMemberTrail>>>
+export type GetMemberTrailQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get recent location trail for a circle member (last 10 points)
+ */
+
+export function useGetMemberTrail<TData = Awaited<ReturnType<typeof getMemberTrail>>, TError = ErrorType<unknown>>(
+ circleId: number,
+    memberId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMemberTrail>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMemberTrailQueryOptions(circleId,memberId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPingMemberUrl = (circleId: number,
+    memberId: number,) => {
+
+
+
+
+  return `/api/circles/${circleId}/members/${memberId}/ping`
+}
+
+/**
+ * @summary Request a circle member to share their current location
+ */
+export const pingMember = async (circleId: number,
+    memberId: number, options?: RequestInit): Promise<PingMember200> => {
+
+  return customFetch<PingMember200>(getPingMemberUrl(circleId,memberId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getPingMemberMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof pingMember>>, TError,{circleId: number;memberId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof pingMember>>, TError,{circleId: number;memberId: number}, TContext> => {
+
+const mutationKey = ['pingMember'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof pingMember>>, {circleId: number;memberId: number}> = (props) => {
+          const {circleId,memberId} = props ?? {};
+
+          return  pingMember(circleId,memberId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PingMemberMutationResult = NonNullable<Awaited<ReturnType<typeof pingMember>>>
+
+    export type PingMemberMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Request a circle member to share their current location
+ */
+export const usePingMember = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof pingMember>>, TError,{circleId: number;memberId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof pingMember>>,
+        TError,
+        {circleId: number;memberId: number},
+        TContext
+      > => {
+      return useMutation(getPingMemberMutationOptions(options));
     }
 

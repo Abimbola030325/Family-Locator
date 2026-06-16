@@ -246,3 +246,7 @@ state?: string;
 iss?: string;
 };
 
+export type PingMember200 = {
+  ok: boolean;
+};
+

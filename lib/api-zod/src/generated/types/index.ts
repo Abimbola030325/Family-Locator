@@ -31,6 +31,7 @@ export * from './memberRole';
 export * from './messageInput';
 export * from './mobileTokenExchangeRequest';
 export * from './mobileTokenExchangeSuccess';
+export * from './pingMember200';
 export * from './place';
 export * from './placeInput';
 export * from './placeUpdate';
