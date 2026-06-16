@@ -1,5 +1,10 @@
 uploads = []
-generated = []
+
+[[generated]]
+id = "BKsZOLKAFfhJB-b_Fi5lz"
+uri = "file://attached_assets/generated_images/nigerian_family_location_app_e93f.png"
+type = "image"
+title = "generated_image"
 
 [[outputs]]
 id = "Xqd8ksxYn-7LeJK7cdFW3"

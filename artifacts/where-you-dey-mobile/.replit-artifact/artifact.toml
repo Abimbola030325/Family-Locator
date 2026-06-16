@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/mobile/"
+title = "Where You Dey? Mobile"
+version = "1.0.0"
+id = "artifacts/where-you-dey-mobile"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+name = "expo"
+paths = [ "/mobile/" ]
+localPort = 23436
+
+[services.development]
+run = "pnpm --filter @workspace/where-you-dey-mobile run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/where-you-dey-mobile", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/where-you-dey-mobile", "run", "serve" ]
+
+[services.env]
+PORT = "23436"
+BASE_PATH = "/mobile/"

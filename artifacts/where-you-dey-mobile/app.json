@@ -1,0 +1,60 @@
+{
+  "expo": {
+    "name": "Where You Dey?",
+    "slug": "where-you-dey-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "whereyoudey",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#13a591"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.whereyoudey.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Where You Dey? needs your location to share with your circle.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Where You Dey? uses your location to keep your circle updated.",
+        "NSLocationAlwaysUsageDescription": "Where You Dey? uses your location in the background."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#13a591"
+      },
+      "package": "com.whereyoudey.app",
+      "permissions": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/images/icon.png"
+    },
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "origin": "https://replit.com/"
+        }
+      ],
+      "expo-font",
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Where You Dey? needs your location to share with your circle."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
